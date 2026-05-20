@@ -1,0 +1,29 @@
+{
+  "name": "be-sikokar",
+  "version": "1.5.0",
+  "description": "SIKOKAR v1.5 — Express API backend",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "knex migrate:latest",
+    "seed": "knex seed:run",
+    "setup": "knex migrate:latest && knex seed:run"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^2.4.3",
+    "connect-session-knex": "^5.0.0",
+    "csv-parse": "^5.6.0",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1",
+    "knex": "^3.1.0",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.12.0"
+  }
+}
