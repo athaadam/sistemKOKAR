@@ -406,7 +406,7 @@ export default function BarangPage() {
                 <label className="fl">Barcode</label>
                 <input
                   value={form.barcode}
-                  onChange={(e) => setField('barcode', e.target.value)}
+                  onChange={(e) => setField('barcode', e.target.value.replace(/\D/g, ''))}
                   className="form-control form-control-sm"
                 />
               </div>

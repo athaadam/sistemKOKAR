@@ -45,6 +45,11 @@ const METODE_OPTS = [
   { value: 'potong-gaji', label: 'Potong Gaji' },
 ];
 
+const METODE_TARIK = [
+  { value: 'tunai', label: 'Tunai' },
+  { value: 'transfer', label: 'Transfer' },
+];
+
 function capitalize(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
@@ -278,7 +283,7 @@ export function SimpananPageContent() {
               <div className="col-md-6">
                 <label className="fl">Metode</label>
                 <select className="form-select form-select-sm" value={trxForm.metode} onChange={(e) => setTrxForm({ ...trxForm, metode: e.target.value })}>
-                  {METODE_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  {(trxForm.tipe === 'tarik' ? METODE_TARIK : METODE_OPTS).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
               <div className="col-md-6">

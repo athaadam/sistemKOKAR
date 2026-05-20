@@ -186,8 +186,45 @@ export default function AnggotaPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function validateAnggotaForm(): string | null {
+    // Validasi NIP max 20 angka
+    if (form.nip && !/^\d*$/.test(form.nip)) {
+      return 'NIP hanya boleh berisi angka';
+    }
+    if (form.nip && form.nip.length > 20) {
+      return 'NIP maksimal 20 angka';
+    }
+
+    // Validasi NIK 18 angka
+    if (form.nik && !/^\d*$/.test(form.nik)) {
+      return 'NIK hanya boleh berisi angka';
+    }
+    if (form.nik && form.nik.length !== 18) {
+      return 'NIK harus 18 angka';
+    }
+
+    // Validasi tanggal lahir, masuk, keluar
+    if (form.tgl_lahir && form.tgl_masuk && form.tgl_masuk < form.tgl_lahir) {
+      return 'Tanggal masuk tidak boleh lebih awal dari tanggal lahir';
+    }
+
+    if (form.tgl_masuk && form.tgl_keluar && form.tgl_keluar < form.tgl_masuk) {
+      return 'Tanggal keluar tidak boleh lebih awal dari tanggal masuk';
+    }
+
+    return null;
+  }
+
   async function onSave(e: FormEvent) {
     e.preventDefault();
+    
+    const validationError = validateAnggotaForm();
+    if (validationError) {
+      setFlash(validationError);
+      setFlashType('danger');
+      return;
+    }
+
     setSaving(true);
     setFlash('');
     try {
@@ -546,18 +583,18 @@ export default function AnggotaPage() {
                       </div>
                       <div className="col-md-3">
                         <label className="fl">Nama Bank</label>
-                        <input
+                        <select
                           value={form.nama_bank}
                           onChange={(e) => setField('nama_bank', e.target.value)}
-                          className="form-control form-control-sm"
-                          list="bank-list"
-                          placeholder="BRI / BNI / ..."
-                        />
-                        <datalist id="bank-list">
+                          className="form-select form-select-sm"
+                        >
+                          <option value="">— Pilih Bank —</option>
                           {BANKS.map((b) => (
-                            <option key={b} value={b} />
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
                           ))}
-                        </datalist>
+                        </select>
                       </div>
                       <div className="col-md-6">
                         <label className="fl">Departemen</label>
