@@ -75,6 +75,14 @@ export function RentalMaintenancePageContent() {
     return m;
   }, [rows]);
 
+  const totalBiaya = useMemo(() => {
+    const servis = Number(form.biaya_servis) || 0;
+    const fuel = Number(form.biaya_fuel) || 0;
+    const tol = Number(form.biaya_tol) || 0;
+    const konsumsi = Number(form.biaya_konsumsi) || 0;
+    return servis + fuel + tol + konsumsi;
+  }, [form.biaya_servis, form.biaya_fuel, form.biaya_tol, form.biaya_konsumsi]);
+
   const load = useCallback(() => {
     setLoading(true);
     setErr('');
@@ -165,7 +173,7 @@ export function RentalMaintenancePageContent() {
         tgl: form.tgl,
         jenis: form.jenis,
         deskripsi: form.deskripsi,
-        biaya: Number(form.biaya) || 0,
+        biaya: totalBiaya,
         biaya_servis: Number(form.biaya_servis) || 0,
         biaya_fuel: Number(form.biaya_fuel) || 0,
         biaya_tol: Number(form.biaya_tol) || 0,
@@ -395,17 +403,11 @@ export function RentalMaintenancePageContent() {
                   min={0}
                 />
               </div>
-              <div className="col-md-3">
-                <label className="fl">Biaya Total (Rp) *</label>
-                <input
-                  type="number"
-                  value={form.biaya}
-                  onChange={(e) => setForm((f) => ({ ...f, biaya: e.target.value }))}
-                  className="form-control form-control-sm"
-                  placeholder="Total biaya"
-                  min={0}
-                  required
-                />
+              <div className="col-12" style={{ marginTop: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '0.375rem', color: '#1D4ED8', fontWeight: 'bold' }}>
+                  <span>TOTAL BIAYA (Otomatis)</span>
+                  <span style={{ fontSize: '18px' }}>Rp {fmtRp(totalBiaya)}</span>
+                </div>
               </div>
               <div className="col-md-3">
                 <label className="fl">Liter Fuel</label>

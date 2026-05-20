@@ -82,7 +82,7 @@ router.post('/bayar', accessRequired('ppob'), asyncHandler(async (req, res) => {
         fee,
         total,
         'sukses',
-        req.session.user.id,
+        req.user.id,
         saldoProvider,
         komisi,
       ],
@@ -99,7 +99,7 @@ router.post('/bayar', accessRequired('ppob'), asyncHandler(async (req, res) => {
         'Kas',
         'Pendapatan PPOB',
         fee,
-        req.session.user.id,
+        req.user.id,
       ],
     );
     await audit('ppob', 'bayar', 'ppob_trx', tid, null, { no, total, fee }, 'Pembayaran PPOB');

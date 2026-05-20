@@ -77,7 +77,7 @@ router.post('/save', accessRequired('pembelian'), asyncHandler(async (req, res) 
       pb_id = uid();
       await X(
         'INSERT INTO pembelian (id,no,tgl,supplier_id,lokasi_id,total,status,catatan,user_id) VALUES (?,?,?,?,?,?,?,?,?)',
-        [pb_id, no, tgl, sup, lok, total, status, catatan, req.session.user.id],
+        [pb_id, no, tgl, sup, lok, total, status, catatan, req.user.id],
       );
     }
 

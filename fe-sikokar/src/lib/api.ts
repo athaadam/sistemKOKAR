@@ -1,3 +1,5 @@
+import { getToken, saveToken, clearToken } from './auth';
+
 const API = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 export type ApiResult<T = unknown> = {
@@ -6,6 +8,7 @@ export type ApiResult<T = unknown> = {
   message?: string;
   data?: T;
   user?: User;
+  token?: string;
   [key: string]: unknown;
 };
 
@@ -20,12 +23,26 @@ export type User = {
 };
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
+  const headers = { Accept: 'application/json', ...(init?.headers || {}) };
+  if (token) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  }
+
   const res = await fetch(`${API}${path}`, {
-    credentials: 'include',
-    headers: { Accept: 'application/json', ...(init?.headers || {}) },
+    headers,
     ...init,
   });
   const json = (await res.json().catch(() => ({}))) as ApiResult<T>;
+
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    throw new Error(json.message || 'Session expired');
+  }
+
   if (!res.ok) {
     throw new Error(json.message || `HTTP ${res.status}`);
   }
@@ -56,9 +73,19 @@ export async function getMe(): Promise<User | null> {
 }
 
 export async function login(username: string, password: string) {
-  return api.post<ApiResult & { user: User }>('/auth/login', { username, password });
+  const result = await api.post<ApiResult & { user: User; token: string }>('/auth/login', { username, password });
+  if (result.token) {
+    saveToken(result.token);
+  }
+  return result;
 }
 
 export async function logout() {
-  return api.post('/auth/logout');
+  try {
+    await api.post('/auth/logout');
+  } catch {
+    // ignore error on logout
+  } finally {
+    clearToken();
+  }
 }

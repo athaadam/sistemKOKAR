@@ -19,7 +19,7 @@ function registerRoutes(router, deps) {
   const { asyncHandler, accessRequired } = deps;
   router.get('/', accessRequired('toko'), asyncHandler(async (req, res) => {
   try {
-    const u = req.session.user;
+    const u = req.user;
     const lokasi_id = u.lokasi_id || 'L1';
     const lokasi_list = await Q("SELECT * FROM lokasi WHERE jenis='toko' AND aktif=1");
     const kats = await Q(
@@ -167,7 +167,7 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
 
     const open_shift = await Q(
       "SELECT id FROM pos_shift WHERE user_id=? AND status='open' ORDER BY tgl_buka DESC LIMIT 1",
-      [req.session.user.id],
+      [req.user.id],
       true,
     );
 
@@ -205,7 +205,7 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
         total,
         pkp ? 1 : 0,
         'lunas',
-        req.session.user.id,
+        req.user.id,
         open_shift?.id || '',
         promo_id,
         promo_diskon,
@@ -262,7 +262,7 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
         ['kredit', 'potong_gaji'].includes(jenis) ? 'Piutang Anggota' : 'Kas',
         'Penjualan',
         total,
-        req.session.user.id,
+        req.user.id,
       ],
     );
     await audit('toko', 'checkout', 'penjualan', pj_id, null, { no, total, diskon: total_diskon }, 'Checkout POS');
@@ -438,7 +438,7 @@ router.post('/riwayat/import', accessRequired('toko'), upload.single('file'), as
           Number(r.total) || 0,
           0,
           r.status || 'lunas',
-          req.session.user.id,
+          req.user.id,
           r.payment_channel || r.jenis || 'cash',
         ],
       );
@@ -452,7 +452,7 @@ router.post('/riwayat/import', accessRequired('toko'), upload.single('file'), as
 
 router.all('/shift', accessRequired('toko'), async (req, res) => {
   try {
-    const u = req.session.user;
+    const u = req.user;
     const open_shift = await Q(
       "SELECT * FROM pos_shift WHERE user_id=? AND status='open' ORDER BY tgl_buka DESC LIMIT 1",
       [u.id],
@@ -531,8 +531,8 @@ router.post('/hold', accessRequired('toko'), asyncHandler(async (req, res) => {
       [
         hid,
         no,
-        req.session.user.id,
-        f.lokasi_id || req.session.user.lokasi_id,
+        req.user.id,
+        f.lokasi_id || req.user.lokasi_id,
         f.anggota_id || null,
         items_json,
         total,
@@ -549,7 +549,7 @@ router.get('/hold/list', accessRequired('toko'), asyncHandler(async (req, res) =
   try {
     const rows = await Q(
       'SELECT * FROM pos_hold WHERE user_id=? ORDER BY created_at DESC LIMIT 30',
-      [req.session.user.id],
+      [req.user.id],
     );
     return jsonOk(res, { rows });
   } catch (e) {
@@ -580,7 +580,7 @@ router.post('/void/:pid', accessRequired('toko'), asyncHandler(async (req, res) 
     await X('UPDATE penjualan SET void=1 WHERE id=?', [req.params.pid]);
     await X(
       'INSERT INTO pos_void (id,penjualan_id,no_penjualan,alasan,user_id) VALUES (?,?,?,?,?)',
-      [uid(), req.params.pid, p.no, alasan, req.session.user.id],
+      [uid(), req.params.pid, p.no, alasan, req.user.id],
     );
     const items = await Q('SELECT * FROM penjualan_item WHERE penjualan_id=?', [req.params.pid]);
     for (const it of items) {

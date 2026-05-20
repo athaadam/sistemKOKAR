@@ -61,7 +61,7 @@ router.post('/booking', accessRequired('rental'), asyncHandler(async (req, res) 
       [
         uid(), no, today(), tgl_mulai, tgl_selesai, kend_id, f.penyewa_tipe || 'umum', f.nama_penyewa || '',
         f.nama_perusahaan || '', f.npwp_penyewa || '', f.no_hp || '', f.keperluan || '',
-        tipe_harga, tarif, hari, bulan, total, 0, kend.km || 0, 'aktif', 0, req.session.user.id,
+        tipe_harga, tarif, hari, bulan, total, 0, kend.km || 0, 'aktif', 0, req.user.id,
       ],
     );
     await X("UPDATE kendaraan SET status='disewa' WHERE id=?", [kend_id]);
@@ -197,7 +197,7 @@ router.post('/maintenance', accessRequired('rental'), asyncHandler(async (req, r
         `INSERT INTO rental_maintenance (id,kendaraan_id,tgl,jenis,deskripsi,biaya_servis,biaya,
          km_saat_ini,next_service_km,next_service_tgl,bengkel,catatan,user_id,biaya_fuel,biaya_tol,biaya_konsumsi,liter_fuel,km_per_liter)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [uid(), f.kendaraan_id, ...vals, req.session.user.id],
+        [uid(), f.kendaraan_id, ...vals, req.user.id],
       );
     }
     return jsonOk(res, {}, 'Data maintenance disimpan');
@@ -282,7 +282,7 @@ router.post('/biaya', accessRequired('rental'), asyncHandler(async (req, res) =>
     const f = req.body;
     await X(
       'INSERT INTO rental_biaya_ops (id,rental_id,kendaraan_id,tgl,jenis,deskripsi,nominal,user_id) VALUES (?,?,?,?,?,?,?,?)',
-      [uid(), f.rental_id || null, f.kendaraan_id, f.tgl || today(), f.jenis, f.deskripsi || '', Number(f.nominal) || 0, req.session.user.id],
+      [uid(), f.rental_id || null, f.kendaraan_id, f.tgl || today(), f.jenis, f.deskripsi || '', Number(f.nominal) || 0, req.user.id],
     );
     return jsonOk(res, {}, 'Biaya operasional disimpan');
   } catch (e) {

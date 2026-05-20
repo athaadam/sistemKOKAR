@@ -91,7 +91,7 @@ router.post('/save', accessRequired('simpanan'), asyncHandler(async (req, res) =
     if (!ket) ket = `${tipe === 'setor' ? 'Setoran' : 'Penarikan'} ${jenis} ${ang?.nama || ''}`;
     await X(
       'INSERT INTO simpanan_trx (id,no,tgl,anggota_id,jenis,tipe,nominal,metode,ket,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), no, tgl, anggota_id, jenis, tipe, nominal, metode, ket, req.session.user.id],
+      [uid(), no, tgl, anggota_id, jenis, tipe, nominal, metode, ket, req.user.id],
     );
     return jsonOk(res, {}, `${tipe === 'setor' ? 'Setoran' : 'Penarikan'} ${fmtRp(nominal)} berhasil`);
   } catch (e) {
@@ -194,7 +194,7 @@ router.post('/setor_massal/proses', accessRequired('simpanan'), asyncHandler(asy
         const no = `SMP-${tgl.replace(/-/g, '')}-${uid().slice(0, 4)}`;
         await X(
           'INSERT INTO simpanan_trx (id,no,tgl,anggota_id,jenis,tipe,nominal,metode,ket,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-          [uid(), no, tgl, aid, jenis, 'setor', nominal, metode, `Setoran massal ${jenis} ${nama} bln ${bulan}`, req.session.user.id],
+          [uid(), no, tgl, aid, jenis, 'setor', nominal, metode, `Setoran massal ${jenis} ${nama} bln ${bulan}`, req.user.id],
         );
       }
       ok++;
@@ -239,12 +239,12 @@ router.post('/jasa', accessRequired('simpanan'), asyncHandler(async (req, res) =
       if (existing) continue;
       await X(
         'INSERT INTO simpanan_jasa (id,no,periode,anggota_id,saldo_rata,rate_pct,jasa,tgl,user_id) VALUES (?,?,?,?,?,?,?,?,?)',
-        [uid(), no, periode, a.id, saldo, rate, jasa, today(), req.session.user.id],
+        [uid(), no, periode, a.id, saldo, rate, jasa, today(), req.user.id],
       );
       await X("UPDATE simpanan SET saldo=saldo+? WHERE anggota_id=? AND jenis='sukarela'", [jasa, a.id]);
       await X(
         'INSERT INTO simpanan_trx (id,no,tgl,anggota_id,jenis,tipe,nominal,metode,ket,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [uid(), no, today(), a.id, 'sukarela', 'setor', jasa, 'jasa-simpanan', `Bunga jasa simpanan ${periode} (${rate}%)`, req.session.user.id],
+        [uid(), no, today(), a.id, 'sukarela', 'setor', jasa, 'jasa-simpanan', `Bunga jasa simpanan ${periode} (${rate}%)`, req.user.id],
       );
       ok++;
     }

@@ -46,7 +46,7 @@ router.post('/save', accessRequired('labor'), asyncHandler(async (req, res) => {
     const no = `LBR-${today().replace(/-/g, '')}-${uid().slice(0, 4)}`;
     await X(
       'INSERT INTO labor_kontrak (id,no,klien,pekerjaan,lokasi,tgl,tgl_mulai,tgl_selesai,nilai_kontrak,status,catatan,user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
-      [uid(), no, f.klien, f.pekerjaan, f.lokasi, f.tgl || today(), f.tgl_mulai, f.tgl_selesai, Number(f.nilai_kontrak) || 0, f.status || 'aktif', f.catatan || '', req.session.user.id],
+      [uid(), no, f.klien, f.pekerjaan, f.lokasi, f.tgl || today(), f.tgl_mulai, f.tgl_selesai, Number(f.nilai_kontrak) || 0, f.status || 'aktif', f.catatan || '', req.user.id],
     );
     return jsonOk(res, { no }, `${no} — Kontrak labor berhasil disimpan`);
   } catch (e) {
@@ -233,7 +233,7 @@ router.get('/invoice/:kid', accessRequired('labor'), asyncHandler(async (req, re
       `INSERT INTO kwitansi (id,no,tipe,tgl,penerima,perusahaan,items_json,subtotal,
        diskon,ppn,pph,total,terbilang,status,catatan,user_id)
        VALUES (?,?,'invoice',?,?,?,?,?,0,?,?,?,?,'belum-lunas',?,?)`,
-      [inv_id, no, today(), k.klien, k.klien, JSON.stringify(items), subtotal, ppn, pph, total, terbilang(total), `Invoice atas kontrak labor: ${k.no}`, req.session.user.id],
+      [inv_id, no, today(), k.klien, k.klien, JSON.stringify(items), subtotal, ppn, pph, total, terbilang(total), `Invoice atas kontrak labor: ${k.no}`, req.user.id],
     );
     await audit('labor', 'generate_invoice', 'kwitansi', inv_id, null, { no, total }, `Invoice dari kontrak ${k.no}`);
     return jsonOk(res, { id: inv_id, no }, `Invoice ${no} dibuat untuk kontrak ${k.no}`);

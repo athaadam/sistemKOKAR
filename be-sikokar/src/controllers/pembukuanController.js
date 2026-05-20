@@ -236,7 +236,7 @@ router.post('/jurnal/save', accessRequired('pembukuan'), asyncHandler(async (req
     const no = `JRN-${today().replace(/-/g, '')}-${uid().slice(0, 4)}`;
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), no, f.tgl || today(), f.modul || 'Manual', no, f.ket, f.debit, f.kredit, nominal, req.session.user.id],
+      [uid(), no, f.tgl || today(), f.modul || 'Manual', no, f.ket, f.debit, f.kredit, nominal, req.user.id],
     );
     return jsonOk(res, { no }, 'Jurnal ditambahkan');
   } catch (e) {
@@ -377,7 +377,7 @@ router.post('/import/jurnal', accessRequired('pembukuan'), upload.single('file')
       if (existing) continue;
       await X(
         'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [uid(), no || `JRN-IMP-${uid().slice(0, 6)}`, tgl, modul || 'Import', ref, ket, debit, kredit, nominal, req.session.user.id],
+        [uid(), no || `JRN-IMP-${uid().slice(0, 6)}`, tgl, modul || 'Import', ref, ket, debit, kredit, nominal, req.user.id],
       );
       imported++;
     }
@@ -549,9 +549,9 @@ router.post('/jurnal/reverse/:jid', accessRequired('pembukuan'), asyncHandler(as
     const no_rev = `REV-${j.no}-${uid().slice(0, 4)}`;
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), no_rev, today(), j.modul, j.ref, `REVERSE: ${j.ket} — ${alasan}`, j.kredit, j.debit, j.nominal, req.session.user.id],
+      [uid(), no_rev, today(), j.modul, j.ref, `REVERSE: ${j.ket} — ${alasan}`, j.kredit, j.debit, j.nominal, req.user.id],
     );
-    await X('INSERT INTO jurnal_reverse (id,jurnal_id,no_reverse,alasan,user_id) VALUES (?,?,?,?,?)', [uid(), jid, no_rev, alasan, req.session.user.id]);
+    await X('INSERT INTO jurnal_reverse (id,jurnal_id,no_reverse,alasan,user_id) VALUES (?,?,?,?,?)', [uid(), jid, no_rev, alasan, req.user.id]);
     await audit('pembukuan', 'reverse', 'jurnal', jid, j, null, `Reverse: ${alasan}`);
     return jsonOk(res, { no_reverse: no_rev }, `Jurnal di-reverse: ${no_rev}`);
   } catch (e) {
@@ -575,7 +575,7 @@ router.post('/close_period', accessRequired('pembukuan'), asyncHandler(async (re
     if (existing) return jsonErr(res, `Periode ${periode} sudah tertutup sebelumnya`, 400);
     await X(
       'INSERT INTO close_period (id,periode,tgl_tutup,user_id,user_name,catatan) VALUES (?,?,?,?,?,?)',
-      [uid(), periode, today(), req.session.user.id, req.session.user.name || '-', req.body.catatan || ''],
+      [uid(), periode, today(), req.user.id, req.user.name || '-', req.body.catatan || ''],
     );
     await audit('pembukuan', 'close_period', 'close_period', periode, null, { periode }, `Tutup buku ${periode}`);
     return jsonOk(res, {}, `Periode ${periode} berhasil ditutup`);

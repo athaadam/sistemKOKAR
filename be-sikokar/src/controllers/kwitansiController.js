@@ -57,7 +57,7 @@ router.post('/new', accessRequired('kwitansi'), asyncHandler(async (req, res) =>
     const kid = uid();
     await X(
       `INSERT INTO kwitansi (id,no,tipe,tgl,penerima,perusahaan,items_json,subtotal,diskon,ppn,pph,total,terbilang,status,catatan,user_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [kid, no, tipe, f.tgl || today(), f.penerima, f.perusahaan, JSON.stringify(items), subtotal, diskon, ppn, pph, total, terbilang(total), 'belum-lunas', f.catatan || '', req.session.user.id],
+      [kid, no, tipe, f.tgl || today(), f.penerima, f.perusahaan, JSON.stringify(items), subtotal, diskon, ppn, pph, total, terbilang(total), 'belum-lunas', f.catatan || '', req.user.id],
     );
     return jsonOk(res, { id: kid, no }, `${no} berhasil dibuat`);
   } catch (e) {

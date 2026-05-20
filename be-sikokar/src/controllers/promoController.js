@@ -6,7 +6,7 @@ const { audit } = require('../utils/audit');
 function promoAccess(req, res, next) {
   const { canAccess } = require('../constants/roleMenus');
   if (!req.session?.user) return jsonErr(res, 'Login required', 401);
-  if (!canAccess(req.session.user, 'barang') && !canAccess(req.session.user, 'promo')) {
+  if (!canAccess(req.user, 'barang') && !canAccess(req.user, 'promo')) {
     return jsonErr(res, 'Akses ditolak', 403);
   }
   next();

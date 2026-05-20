@@ -2,8 +2,9 @@ const bcrypt = require('bcryptjs');
 const { Q, X } = require('../db');
 const { getSetting } = require('../utils/settings');
 const { nowStr, jsonOk, jsonErr } = require('../utils/helpers');
-const { ROLE_LABELS } = require('../constants/roleMenus');
-const { canAccess } = require('../middleware/auth');
+const { ROLE_LABELS, canAccess } = require('../constants/roleMenus');
+const { signToken } = require('../utils/jwt');
+const { loginRequired } = require('../middleware/auth');
 
 const loginAttempts = new Map();
 
@@ -32,13 +33,8 @@ function clearLoginAttempts(ip) {
 
 function registerRoutes(router, deps) {
   const { asyncHandler } = deps;
-  router.get('/', (_req, res) => {
-  if (res.req.session?.user) return res.redirect('/api/dashboard');
-  return res.redirect('/api/auth/login');
-});
 
 router.get('/login', (req, res) => {
-  if (req.session.user) return jsonOk(res, { user: req.session.user });
   return jsonOk(res, { user: null });
 });
 
@@ -81,18 +77,24 @@ router.post('/login', asyncHandler(async (req, res) => {
       }
 
       clearLoginAttempts(ip);
-      req.session.user = { ...user };
-      delete req.session.user.password;
+      const userObj = { ...user };
+      delete userObj.password;
 
-      const timeout = Number(await getSetting('session_timeout_minutes', '60')) || 60;
-      req.session.cookie.maxAge = timeout * 60 * 1000;
+      const token = signToken({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        custom_menus: user.custom_menus,
+        lokasi_id: user.lokasi_id,
+      });
 
       await X(
         'UPDATE users SET last_login=?, last_login_ip=?, failed_attempts=0 WHERE id=?',
         [nowStr(), ip, user.id],
       );
 
-      return jsonOk(res, { user: req.session.user }, `Selamat datang, ${user.name}!`);
+      return jsonOk(res, { token, user: userObj }, `Selamat datang, ${user.name}!`);
     }
 
     if (user) {
@@ -107,19 +109,15 @@ router.post('/login', asyncHandler(async (req, res) => {
   }
 }));
 
-router.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.clearCookie('connect.sid');
-    jsonOk(res, {}, 'Logout berhasil');
-  });
+router.post('/logout', (_req, res) => {
+  jsonOk(res, {}, 'Logout berhasil');
 });
 
-router.get('/me', (req, res) => {
-  if (!req.session.user) return jsonErr(res, 'Not authenticated', 401);
+router.get('/me', loginRequired, (req, res) => {
   return jsonOk(res, {
-    user: req.session.user,
+    user: req.user,
     ROLE_LABELS,
-    canAccess: (menu) => canAccess(req.session.user, menu),
+    canAccess: (menu) => canAccess(req.user, menu),
   });
 });
 }

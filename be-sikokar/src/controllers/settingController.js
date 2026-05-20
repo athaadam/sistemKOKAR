@@ -137,7 +137,7 @@ router.post('/user/save', accessRequired('setting'), roleRequired('admin', 'peng
 router.delete('/user/delete/:u_id', accessRequired('setting'), roleRequired('admin', 'pengurus'), asyncHandler(async (req, res) => {
   try {
     const u_id = req.params.u_id;
-    if (u_id === req.session.user.id) return jsonErr(res, 'Tidak bisa hapus akun sendiri');
+    if (u_id === req.user.id) return jsonErr(res, 'Tidak bisa hapus akun sendiri');
     await X('UPDATE penjualan SET kasir_id=NULL WHERE kasir_id=?', [u_id]);
     await X('UPDATE jurnal SET user_id=NULL WHERE user_id=?', [u_id]);
     await X('DELETE FROM users WHERE id=?', [u_id]);

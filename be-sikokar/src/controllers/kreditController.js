@@ -103,7 +103,7 @@ router.post('/save', accessRequired('kredit'), asyncHandler(async (req, res) => 
       `INSERT INTO kredit_barang (id,no,anggota_id,jenis,nama_barang,toko,harga_beli,dp,pokok,
        bunga_pct,tenor,angsuran,sisa_pokok,cicilan_ke,status,tgl_mulai,catatan,user_id)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid(), no, anggota_id, jenis, f.nama_barang, f.toko, harga_beli, dp, pokok, bunga_pct, tenor, angsuran, pokok, 0, 'aktif', tgl_mulai, f.catatan, req.session.user.id],
+      [uid(), no, anggota_id, jenis, f.nama_barang, f.toko, harga_beli, dp, pokok, bunga_pct, tenor, angsuran, pokok, 0, 'aktif', tgl_mulai, f.catatan, req.user.id],
     );
     return jsonOk(res, {}, `Kredit ${jenis} berhasil ditambahkan — angsuran ${fmtRp(angsuran)}/bln`);
   } catch (e) {
@@ -138,7 +138,7 @@ router.post('/bayar/:kid', accessRequired('kredit'), asyncHandler(async (req, re
     await X('UPDATE kredit_barang SET sisa_pokok=?,cicilan_ke=cicilan_ke+1,status=? WHERE id=?', [sisa_baru, status_baru, kid]);
     await X(
       'INSERT INTO kredit_bayar (id,kredit_id,tgl,nominal,pokok,bunga,metode,user_id) VALUES (?,?,?,?,?,?,?,?)',
-      [uid(), kid, tgl, kr.angsuran, pokok_angs, bunga_angs, metode, req.session.user.id],
+      [uid(), kid, tgl, kr.angsuran, pokok_angs, bunga_angs, metode, req.user.id],
     );
     return jsonOk(res, {}, `Angsuran kredit ${fmtRp(kr.angsuran)} berhasil — sisa ${fmtRp(sisa_baru)}`);
   } catch (e) {

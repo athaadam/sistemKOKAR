@@ -145,11 +145,11 @@ router.post('/ajukan', accessRequired('pinjaman'), asyncHandler(async (req, res)
     const no = `PIN-${tgl_pengajuan.replace(/-/g, '')}-${uid().slice(0, 3)}`;
     await X(
       `INSERT INTO pinjaman (id,no,anggota_id,jenis,nominal,disetujui,tenor,bunga,angsuran,sisa_pokok,status,tgl_pengajuan,tgl_cair,user_id,rate_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid(), no, anggota_id, jenis, nominal, nominal, tenor, bunga, angsuran, nominal, 'aktif', tgl_pengajuan, tgl_cair, req.session.user.id, rate_type],
+      [uid(), no, anggota_id, jenis, nominal, nominal, tenor, bunga, angsuran, nominal, 'aktif', tgl_pengajuan, tgl_cair, req.user.id, rate_type],
     );
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), `JRN-${uid()}`, tgl_cair, 'Simpan Pinjam', no, `Pencairan ${jenis} ${ang.nama}`, 'Piutang Pinjaman', 'Kas', nominal, req.session.user.id],
+      [uid(), `JRN-${uid()}`, tgl_cair, 'Simpan Pinjam', no, `Pencairan ${jenis} ${ang.nama}`, 'Piutang Pinjaman', 'Kas', nominal, req.user.id],
     );
     await audit('pinjaman', 'create', 'pinjaman', '', null, { no, nominal, rate_type }, 'Pengajuan pinjaman');
     return jsonOk(res, { no }, `${no} — ${fmtRp(nominal)} berhasil dicairkan (bunga ${bunga}%/bln, ${rate_type}, angsuran awal ${fmtRp(angsuran)}/bln)`);
@@ -170,7 +170,7 @@ router.post('/bayar/:pin_id', accessRequired('pinjaman'), asyncHandler(async (re
     await X('UPDATE pinjaman SET sisa_pokok=?,status=? WHERE id=?', [sisa_baru, status_baru, pin_id]);
     await X(
       'INSERT INTO pinjaman_bayar (id,pinjaman_id,tgl,nominal,metode,user_id) VALUES (?,?,?,?,?,?)',
-      [uid(), pin_id, tgl, pin.angsuran, metode, req.session.user.id],
+      [uid(), pin_id, tgl, pin.angsuran, metode, req.user.id],
     );
     return jsonOk(res, {}, `Angsuran ${fmtRp(pin.angsuran)} berhasil — sisa ${fmtRp(sisa_baru)}`);
   } catch (e) {
@@ -258,12 +258,12 @@ router.post('/topup/:pid', accessRequired('pinjaman'), asyncHandler(async (req, 
       `INSERT INTO pinjaman_history (id,pinjaman_id,aksi,tgl,nominal_lama,nominal_baru,
        tenor_lama,tenor_baru,angsuran_lama,angsuran_baru,bunga_lama,bunga_baru,keterangan,user_id)
        VALUES (?,?,'topup',?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid(), pid, today(), p.sisa_pokok, nominal_baru, p.tenor, tenor_baru, p.angsuran, angsuran_baru, bunga, bunga, f.keterangan || '', req.session.user.id],
+      [uid(), pid, today(), p.sisa_pokok, nominal_baru, p.tenor, tenor_baru, p.angsuran, angsuran_baru, bunga, bunga, f.keterangan || '', req.user.id],
     );
     await X('UPDATE pinjaman SET sisa_pokok=?,nominal=nominal+?,tenor=?,angsuran=? WHERE id=?', [nominal_baru, tambahan, tenor_baru, angsuran_baru, pid]);
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), `JRN-${uid().slice(0, 8)}`, today(), 'Simpan Pinjam', p.no, `Top-up pinjaman ${p.no}`, 'Piutang Pinjaman', 'Kas', tambahan, req.session.user.id],
+      [uid(), `JRN-${uid().slice(0, 8)}`, today(), 'Simpan Pinjam', p.no, `Top-up pinjaman ${p.no}`, 'Piutang Pinjaman', 'Kas', tambahan, req.user.id],
     );
     await audit('pinjaman', 'topup', 'pinjaman', pid, { sisa: p.sisa_pokok, tenor: p.tenor }, { sisa: nominal_baru, tenor: tenor_baru }, 'Top-up pinjaman');
     return jsonOk(res, {}, `Top-up berhasil — Sisa pokok: ${fmtRp(nominal_baru)}, Angsuran: ${fmtRp(angsuran_baru)}/bln`);
@@ -285,7 +285,7 @@ router.post('/restrukturisasi/:pid', accessRequired('pinjaman'), asyncHandler(as
       `INSERT INTO pinjaman_history (id,pinjaman_id,aksi,tgl,nominal_lama,nominal_baru,
        tenor_lama,tenor_baru,angsuran_lama,angsuran_baru,bunga_lama,bunga_baru,keterangan,user_id)
        VALUES (?,?,'restrukturisasi',?,?,?,?,?,?,?,?,?,?,?)`,
-      [uid(), pid, today(), p.sisa_pokok, p.sisa_pokok, p.tenor, tenor_baru, p.angsuran, angsuran_baru, p.bunga, bunga_baru, f.keterangan || '', req.session.user.id],
+      [uid(), pid, today(), p.sisa_pokok, p.sisa_pokok, p.tenor, tenor_baru, p.angsuran, angsuran_baru, p.bunga, bunga_baru, f.keterangan || '', req.user.id],
     );
     await X('UPDATE pinjaman SET tenor=?,bunga=?,angsuran=? WHERE id=?', [tenor_baru, bunga_baru, angsuran_baru, pid]);
     await audit('pinjaman', 'restrukturisasi', 'pinjaman', pid, { tenor: p.tenor, bunga: p.bunga }, { tenor: tenor_baru, bunga: bunga_baru }, 'Restrukturisasi');
@@ -396,7 +396,7 @@ router.post('/kolektif/proses', accessRequired('pinjaman'), asyncHandler(async (
       await X('UPDATE pinjaman SET sisa_pokok=?,status=? WHERE id=?', [sisa_baru, status_baru, pin_id]);
       await X(
         'INSERT INTO pinjaman_bayar (id,pinjaman_id,tgl,nominal,metode,user_id) VALUES (?,?,?,?,?,?)',
-        [uid(), pin_id, tgl, pin.angsuran, metode, req.session.user.id],
+        [uid(), pin_id, tgl, pin.angsuran, metode, req.user.id],
       );
       ok_pin++;
     }
@@ -419,7 +419,7 @@ router.post('/kolektif/proses', accessRequired('pinjaman'), asyncHandler(async (
         const no = `SMP-${tgl.replace(/-/g, '')}-${uid().slice(0, 4)}`;
         await X(
           'INSERT INTO simpanan_trx (id,no,tgl,anggota_id,jenis,tipe,nominal,metode,ket,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-          [uid(), no, tgl, aid, jenis, 'setor', nominal, metode, `Setor massal ${jenis} bln ${bulan}`, req.session.user.id],
+          [uid(), no, tgl, aid, jenis, 'setor', nominal, metode, `Setor massal ${jenis} bln ${bulan}`, req.user.id],
         );
       }
       ok_sim++;

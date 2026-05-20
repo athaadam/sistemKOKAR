@@ -55,7 +55,7 @@ router.post('/', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
         `INSERT INTO aset_tetap (id,no,nama,kategori,tgl_perolehan,harga_beli,
          umur_ekonomis,nilai_residu,metode_susut,nilai_buku,catatan,user_id)
          VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [uid(), no, f.nama, f.kategori, f.tgl_perolehan, harga, umur, residu, f.metode_susut || 'garis-lurus', harga, f.catatan || '', req.session.user.id],
+        [uid(), no, f.nama, f.kategori, f.tgl_perolehan, harga, umur, residu, f.metode_susut || 'garis-lurus', harga, f.catatan || '', req.user.id],
       );
     }
     return jsonOk(res, {}, 'Aset tetap disimpan');
@@ -72,7 +72,7 @@ router.post('/depresiasi/:aid', accessRequired('pembukuan'), asyncHandler(async 
     const penyusutan_bln = (a.harga_beli - a.nilai_residu) / (a.umur_ekonomis * 12);
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), `JRN-DEP-${uid().slice(0, 6)}`, today(), 'Aset Tetap', a.no, `Penyusutan aset: ${a.nama}`, 'Beban Penyusutan', 'Akumulasi Penyusutan', penyusutan_bln, req.session.user.id],
+      [uid(), `JRN-DEP-${uid().slice(0, 6)}`, today(), 'Aset Tetap', a.no, `Penyusutan aset: ${a.nama}`, 'Beban Penyusutan', 'Akumulasi Penyusutan', penyusutan_bln, req.user.id],
     );
     await X('UPDATE aset_tetap SET akumulasi_penyusutan=akumulasi_penyusutan+?, nilai_buku=nilai_buku-? WHERE id=?', [penyusutan_bln, penyusutan_bln, aid]);
     return jsonOk(res, {}, `Penyusutan bulanan ${fmtRp(penyusutan_bln)} diposting`);

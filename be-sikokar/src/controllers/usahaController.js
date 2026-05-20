@@ -43,7 +43,7 @@ router.post('/', accessRequired('usaha'), asyncHandler(async (req, res) => {
       eid = uid();
       await X(
         'INSERT INTO usaha_lain(id,tgl,jenis,nama,customer,deskripsi,pendapatan,biaya,laba,status,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-        [eid, tgl, f.jenis || 'catering', f.nama || '', f.customer || '', f.deskripsi || '', pend, biaya, laba, status, req.session.user.id],
+        [eid, tgl, f.jenis || 'catering', f.nama || '', f.customer || '', f.deskripsi || '', pend, biaya, laba, status, req.user.id],
       );
     }
 
@@ -52,7 +52,7 @@ router.post('/', accessRequired('usaha'), asyncHandler(async (req, res) => {
       if (!jrnExists) {
         await X(
           'INSERT INTO jurnal(id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id,source_modul,source_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-          [uid(), `JRN-${uid()}`, tgl, 'Usaha Lain', eid, `Pendapatan ${f.jenis || 'usaha'}`, 'Kas', 'Pendapatan Lain-lain', pend, req.session.user.id, 'usaha_lain', eid],
+          [uid(), `JRN-${uid()}`, tgl, 'Usaha Lain', eid, `Pendapatan ${f.jenis || 'usaha'}`, 'Kas', 'Pendapatan Lain-lain', pend, req.user.id, 'usaha_lain', eid],
         );
       }
     }
