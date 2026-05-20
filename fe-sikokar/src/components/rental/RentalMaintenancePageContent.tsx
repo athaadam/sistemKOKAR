@@ -38,6 +38,7 @@ const EMPTY = {
   tgl: today(),
   jenis: '',
   deskripsi: '',
+  biaya_servis: '0',
   biaya: '0',
   biaya_fuel: '0',
   biaya_tol: '0',
@@ -73,15 +74,6 @@ export function RentalMaintenancePageContent() {
     return m;
   }, [rows]);
 
-  const totalBiaya = useMemo(() => {
-    const servis = Number(form.biaya) || 0;
-    const biayaServis = Number(form.biaya_servis) || 0;
-    const fuel = Number(form.biaya_fuel) || 0;
-    const tol = Number(form.biaya_tol) || 0;
-    const konsumsi = Number(form.biaya_konsumsi) || 0;
-    return servis + biayaServis + fuel + tol + konsumsi;
-  }, [form.biaya, form.biaya_servis, form.biaya_fuel, form.biaya_tol, form.biaya_konsumsi]);
-
   const load = useCallback(() => {
     setLoading(true);
     setErr('');
@@ -108,11 +100,6 @@ export function RentalMaintenancePageContent() {
       ...EMPTY,
       tgl: today(),
       kendaraan_id: kendaraan[0]?.id || '',
-      biaya: '0',
-      biaya_servis: '0',
-      biaya_fuel: '0',
-      biaya_tol: '0',
-      biaya_konsumsi: '0',
     });
     setJenisSel('');
     setJenisCustom(false);
@@ -125,16 +112,14 @@ export function RentalMaintenancePageContent() {
 
   function openEdit(row: MaintRow) {
     const opts = jenisOptions.map((o) => o.value);
-    // Load biaya_servis jika ada, jika tidak gunakan biaya lama (backward compatibility)
-    const biayaServis = row.biaya_servis !== undefined ? row.biaya_servis : row.biaya;
     setForm({
       id: row.id,
       kendaraan_id: row.kendaraan_id,
       tgl: row.tgl,
       jenis: row.jenis || '',
       deskripsi: row.deskripsi || '',
-      biaya: String(biayaServis || 0),
       biaya_servis: String(row.biaya_servis || 0),
+      biaya: String(row.biaya || 0),
       biaya_fuel: String(row.biaya_fuel || 0),
       biaya_tol: String(row.biaya_tol || 0),
       biaya_konsumsi: String(row.biaya_konsumsi || 0),
@@ -288,13 +273,12 @@ export function RentalMaintenancePageContent() {
                     <span className="bd bd-blue" style={{ fontSize: 10 }}>{r.jenis}</span>
                   </td>
                   <td style={{ fontSize: 10, color: '#64748B' }}>{r.deskripsi}</td>
-                  <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya || 0)}</td>
                   <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_servis || 0)}</td>
                   <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_fuel || 0)}</td>
                   <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_tol || 0)}</td>
                   <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_konsumsi || 0)}</td>
                   <td className="text-end mono fw-bold" style={{ fontSize: 11, background: '#EFF6FF', color: '#1D4ED8' }}>
-                    {fmtRp((r.biaya || 0) + (r.biaya_servis || 0) + (r.biaya_fuel || 0) + (r.biaya_tol || 0) + (r.biaya_konsumsi || 0))}
+                    {fmtRp(r.biaya || 0)}
                   </td>
                   <td style={{ fontSize: 10, color: '#64748B' }}>{r.bengkel}</td>
                   <td style={{ fontSize: 10 }}>
@@ -407,11 +391,17 @@ export function RentalMaintenancePageContent() {
                   min={0}
                 />
               </div>
-              <div className="col-12" style={{ marginTop: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '0.375rem', color: '#1D4ED8', fontWeight: 'bold' }}>
-                  <span>TOTAL BIAYA (Read-Only)</span>
-                  <span style={{ fontSize: '18px' }}>Rp {fmtRp(totalBiaya)}</span>
-                </div>
+              <div className="col-md-3">
+                <label className="fl">Biaya Total (Rp) *</label>
+                <input
+                  type="number"
+                  value={form.biaya}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="Total biaya"
+                  min={0}
+                  required
+                />
               </div>
               <div className="col-md-3">
                 <label className="fl">Liter Fuel</label>
