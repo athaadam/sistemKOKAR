@@ -639,6 +639,7 @@ exports.up = async function up(knex) {
     t.string('bukti_file', 255);
     t.text('catatan');
     money(t, 'biaya_fuel', 0);
+    money(t, 'biaya_servis', 0);
     money(t, 'biaya_tol', 0);
     money(t, 'biaya_konsumsi', 0);
     money(t, 'liter_fuel', 0);

@@ -104,9 +104,11 @@ export function RentalPageContent() {
 
   const [showBooking, setShowBooking] = useState(false);
   const [showAset, setShowAset] = useState(false);
-  const [showKembali, setShowKembali] = useState(false);
-  const [kembaliId, setKembaliId] = useState('');
+  const [showSelesai, setShowSelesai] = useState(false);
+  const [selesaiId, setSelesaiId] = useState('');
+  const [selesaiForm, setSelesaiForm] = useState({ tgl_kembali: today(), km_kembali: '', kondisi: 'baik', denda: '0' });
   const [saving, setSaving] = useState(false);
+  const [editingRental, setEditingRental] = useState<RentalRow | null>(null);
 
   const [booking, setBooking] = useState({
     kendaraan_id: '',
@@ -191,6 +193,10 @@ export function RentalPageContent() {
     });
   }
 
+  function resetSelesaiForm() {
+    setSelesaiForm({ tgl_kembali: today(), km_kembali: '', kondisi: 'baik', denda: '0' });
+  }
+
   function resetAsetForm() {
     setAsetForm({
       id: '',
@@ -243,24 +249,61 @@ export function RentalPageContent() {
     }
   }
 
-  async function onKembali(e: FormEvent) {
+
+  function openEditRental(row: RentalRow) {
+    setEditingRental(row);
+    setBooking({
+      kendaraan_id: row.aset_kode || '',
+      tgl_mulai: row.tgl_mulai,
+      tgl_selesai: row.tgl_selesai,
+      tipe_harga: row.tipe_harga,
+      tarif_custom: String(row.total),
+      penyewa_tipe: 'umum',
+      nama_penyewa: row.nama_penyewa,
+      nama_perusahaan: row.nama_perusahaan || '',
+      no_hp: '',
+      keperluan: '',
+    });
+    setShowBooking(true);
+  }
+
+  async function onSelesai(e: FormEvent) {
     e.preventDefault();
+    if (!selesaiForm.tgl_kembali) {
+      setFlash('Tanggal kembali harus diisi');
+      setFlashType('danger');
+      return;
+    }
     setSaving(true);
     try {
-      const r = await api.post<{ message?: string }>(`/rental/kembali/${kembaliId}`, {
-        km_kembali: Number(kembaliForm.km_kembali) || undefined,
-        kondisi: kembaliForm.kondisi,
-        denda: Number(kembaliForm.denda) || 0,
+      const r = await api.post<{ message?: string }>(`/rental/kembali/${selesaiId}`, {
+        tgl_kembali: selesaiForm.tgl_kembali,
+        km_kembali: Number(selesaiForm.km_kembali) || undefined,
+        kondisi: selesaiForm.kondisi,
+        denda: Number(selesaiForm.denda) || 0,
       });
-      setFlash(r.message || 'Aset dikembalikan');
+      setFlash(r.message || 'Rental selesai');
       setFlashType('success');
-      setShowKembali(false);
+      setShowSelesai(false);
       load();
     } catch (ex) {
-      setFlash(ex instanceof Error ? ex.message : 'Gagal');
+      setFlash(ex instanceof Error ? ex.message : 'Gagal menyelesaikan rental');
       setFlashType('danger');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function onDeleteRental(id: string) {
+    if (!confirm('Hapus rental ini?')) return;
+    try {
+      const r = await api.delete<{ message?: string }>(`/rental/delete/${id}`);
+      setFlash(r.message || 'Rental dihapus');
+      setFlashType('success');
+      load();
+    } catch (ex) {
+      setFlash(ex instanceof Error ? ex.message : 'Gagal menghapus');
+      setFlashType('danger');
     }
   }
 
@@ -466,20 +509,39 @@ export function RentalPageContent() {
                   <td>
                     <span className={`bd ${r.status === 'selesai' ? 'bd-green' : r.status === 'aktif' ? 'bd-amber' : 'bd-gray'}`}>{r.status}</span>
                   </td>
-                  <td className="no-print">
+                  <td className="no-print text-nowrap">
                     {r.status === 'aktif' && (
-                      <button
-                        type="button"
-                        className="btn btn-act btn-outline-success"
-                        onClick={() => {
-                          setKembaliId(r.id);
-                          setKembaliForm({ km_kembali: '', kondisi: 'baik', denda: '0' });
-                          setShowKembali(true);
-                        }}
-                      >
-                        Kembali
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          className="btn btn-act btn-outline-primary me-1"
+                          onClick={() => openEditRental(r)}
+                          title="Edit"
+                        >
+                          <i className="bi bi-pencil" />
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-act btn-outline-success me-1"
+                          onClick={() => {
+                            setSelesaiId(r.id);
+                            setSelesaiForm({ tgl_kembali: today(), km_kembali: '', kondisi: 'baik', denda: '0' });
+                            setShowSelesai(true);
+                          }}
+                          title="Selesaikan Rental"
+                        >
+                          Selesai
+                        </button>
+                      </>
                     )}
+                    <button
+                      type="button"
+                      className="btn btn-act btn-outline-danger"
+                      onClick={() => onDeleteRental(r.id)}
+                      title="Hapus"
+                    >
+                      <i className="bi bi-trash" />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -569,17 +631,21 @@ export function RentalPageContent() {
         </form>
       </Modal>
 
-      <Modal open={showKembali} onClose={() => setShowKembali(false)} title="Pengembalian Aset" size="md">
-        <form onSubmit={onKembali}>
+      <Modal open={showSelesai} onClose={() => { setShowSelesai(false); resetSelesaiForm(); }} title="Selesaikan Rental" size="md">
+        <form onSubmit={onSelesai}>
           <div className="modal-body">
             <div className="row g-2">
               <div className="col-md-6">
+                <label className="fl">Tanggal Kembali</label>
+                <input type="date" value={selesaiForm.tgl_kembali} onChange={(e) => setSelesaiForm((f) => ({ ...f, tgl_kembali: e.target.value }))} className="form-control form-control-sm" required />
+              </div>
+              <div className="col-md-6">
                 <label className="fl">KM Kembali</label>
-                <input type="number" value={kembaliForm.km_kembali} onChange={(e) => setKembaliForm((f) => ({ ...f, km_kembali: e.target.value }))} className="form-control form-control-sm" />
+                <input type="number" value={selesaiForm.km_kembali} onChange={(e) => setSelesaiForm((f) => ({ ...f, km_kembali: e.target.value }))} className="form-control form-control-sm" />
               </div>
               <div className="col-md-6">
                 <label className="fl">Kondisi</label>
-                <select value={kembaliForm.kondisi} onChange={(e) => setKembaliForm((f) => ({ ...f, kondisi: e.target.value }))} className="form-select form-select-sm">
+                <select value={selesaiForm.kondisi} onChange={(e) => setSelesaiForm((f) => ({ ...f, kondisi: e.target.value }))} className="form-select form-select-sm">
                   <option value="baik">Baik</option>
                   <option value="ada kerusakan">Ada Kerusakan</option>
                   <option value="perlu servis">Perlu Servis</option>
@@ -587,11 +653,11 @@ export function RentalPageContent() {
               </div>
               <div className="col-md-6">
                 <label className="fl">Denda (Rp)</label>
-                <input type="number" value={kembaliForm.denda} onChange={(e) => setKembaliForm((f) => ({ ...f, denda: e.target.value }))} className="form-control form-control-sm" />
+                <input type="number" value={selesaiForm.denda} onChange={(e) => setSelesaiForm((f) => ({ ...f, denda: e.target.value }))} className="form-control form-control-sm" />
               </div>
             </div>
           </div>
-          <ModalFooter onCancel={() => setShowKembali(false)} saving={saving} submitLabel="Konfirmasi Kembali" />
+          <ModalFooter onCancel={() => setShowSelesai(false)} saving={saving} submitLabel="Konfirmasi Selesai" />
         </form>
       </Modal>
 
@@ -628,7 +694,7 @@ export function RentalPageContent() {
                       <span className={`bd ${a.status === 'tersedia' ? 'bd-green' : 'bd-amber'}`}>{a.status}</span>
                     </td>
                     <td>
-                      <button type="button" className="btn btn-act btn-outline-primary me-1" onClick={() => editAset(a)}>
+                      <button type="button" className="btn btn-act btn-outline-primary me-1" onClick={() => { editAset(a); setShowAset(true); }}>
                         <i className="bi bi-pencil" />
                       </button>
                       <button type="button" className="btn btn-act btn-outline-danger" onClick={() => onAsetDelete(a.id)}>

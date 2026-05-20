@@ -15,6 +15,7 @@ type MaintRow = {
   tgl: string;
   jenis: string;
   deskripsi?: string;
+  biaya_servis?: number;
   biaya: number;
   km_saat_ini?: number;
   next_service_km?: number;
@@ -38,6 +39,7 @@ const EMPTY = {
   tgl: today(),
   jenis: '',
   deskripsi: '',
+  biaya_servis: '0',
   biaya: '0',
   biaya_fuel: '0',
   biaya_tol: '0',
@@ -95,7 +97,11 @@ export function RentalMaintenancePageContent() {
   }, [load]);
 
   function resetForm() {
-    setForm({ ...EMPTY, tgl: today(), kendaraan_id: kendaraan[0]?.id || '' });
+    setForm({
+      ...EMPTY,
+      tgl: today(),
+      kendaraan_id: kendaraan[0]?.id || '',
+    });
     setJenisSel('');
     setJenisCustom(false);
   }
@@ -113,6 +119,7 @@ export function RentalMaintenancePageContent() {
       tgl: row.tgl,
       jenis: row.jenis || '',
       deskripsi: row.deskripsi || '',
+      biaya_servis: String(row.biaya_servis || 0),
       biaya: String(row.biaya || 0),
       biaya_fuel: String(row.biaya_fuel || 0),
       biaya_tol: String(row.biaya_tol || 0),
@@ -124,12 +131,15 @@ export function RentalMaintenancePageContent() {
       bengkel: row.bengkel || '',
       catatan: row.catatan || '',
     });
+    setJenisSel('');
     if (row.jenis && opts.includes(row.jenis)) {
       setJenisSel(row.jenis);
       setJenisCustom(false);
     } else if (row.jenis) {
       setJenisSel('__tambah__');
       setJenisCustom(true);
+    } else {
+      setJenisCustom(false);
     }
     setShowEdit(true);
   }
@@ -149,7 +159,26 @@ export function RentalMaintenancePageContent() {
     e.preventDefault();
     setSaving(true);
     try {
-      const r = await api.post<{ message?: string }>('/rental/maintenance', form);
+      const payload = {
+        id: form.id,
+        kendaraan_id: form.kendaraan_id,
+        tgl: form.tgl,
+        jenis: form.jenis,
+        deskripsi: form.deskripsi,
+        biaya: Number(form.biaya) || 0,
+        biaya_servis: Number(form.biaya_servis) || 0,
+        biaya_fuel: Number(form.biaya_fuel) || 0,
+        biaya_tol: Number(form.biaya_tol) || 0,
+        biaya_konsumsi: Number(form.biaya_konsumsi) || 0,
+        liter_fuel: Number(form.liter_fuel) || 0,
+        km_saat_ini: Number(form.km_saat_ini) || 0,
+        next_service_km: Number(form.next_service_km) || 0,
+        next_service_tgl: form.next_service_tgl,
+        bengkel: form.bengkel,
+        catatan: form.catatan,
+      };
+      console.log('DEBUG: Sending maintenance data to API:', payload);
+      const r = await api.post<{ message?: string }>('/rental/maintenance', payload);
       setFlash(r.message || 'Data maintenance disimpan');
       setFlashType('success');
       setShowEdit(false);
@@ -214,25 +243,28 @@ export function RentalMaintenancePageContent() {
         </div>
       )}
 
-      <div className="tbl-wrap">
-        <table className="table table-sm" style={{ fontSize: 11 }}>
+      <div className="tbl-wrap" style={{ overflowX: 'auto' }}>
+        <table className="table table-sm" style={{ fontSize: 11, minWidth: 1000 }}>
           <thead>
             <tr>
-              <th>Tgl</th>
-              <th>Kendaraan</th>
-              <th>Jenis</th>
+              <th style={{ width: 80 }}>Tgl</th>
+              <th style={{ width: 140 }}>Kendaraan</th>
+              <th style={{ width: 100 }}>Jenis</th>
               <th>Deskripsi</th>
-              <th className="text-end">Biaya</th>
-              <th>KM</th>
-              <th>Next Service</th>
-              <th>Bengkel</th>
-              <th>Aksi</th>
+              <th className="text-end" style={{ width: 90 }}>Servis</th>
+              <th className="text-end" style={{ width: 80 }}>Fuel</th>
+              <th className="text-end" style={{ width: 80 }}>Tol</th>
+              <th className="text-end" style={{ width: 90 }}>Konsumsi</th>
+              <th className="text-end" style={{ width: 100, background: '#EFF6FF', fontWeight: 600 }}>Total</th>
+              <th style={{ width: 100 }}>Bengkel</th>
+              <th style={{ width: 120 }}>Next Service</th>
+              <th style={{ width: 80 }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center text-muted py-3">
+                <td colSpan={12} className="text-center text-muted py-3">
                   Belum ada catatan maintenance
                 </td>
               </tr>
@@ -240,23 +272,28 @@ export function RentalMaintenancePageContent() {
               rows.map((r) => (
                 <tr key={r.id}>
                   <td style={{ fontSize: 10 }}>{r.tgl}</td>
-                  <td className="fw-semibold">{r.kendaraan_nama}</td>
+                  <td className="fw-semibold" style={{ fontSize: 11 }}>{r.kendaraan_nama}</td>
                   <td>
-                    <span className="bd bd-blue">{r.jenis}</span>
+                    <span className="bd bd-blue" style={{ fontSize: 10 }}>{r.jenis}</span>
                   </td>
-                  <td>{r.deskripsi}</td>
-                  <td className="text-end mono">{fmtRp(r.biaya)}</td>
-                  <td className="text-end mono">{r.km_saat_ini}</td>
+                  <td style={{ fontSize: 10, color: '#64748B' }}>{r.deskripsi}</td>
+                  <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_servis || 0)}</td>
+                  <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_fuel || 0)}</td>
+                  <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_tol || 0)}</td>
+                  <td className="text-end mono" style={{ fontSize: 11 }}>{fmtRp(r.biaya_konsumsi || 0)}</td>
+                  <td className="text-end mono fw-bold" style={{ fontSize: 11, background: '#EFF6FF', color: '#1D4ED8' }}>
+                    {fmtRp(r.biaya || 0)}
+                  </td>
+                  <td style={{ fontSize: 10, color: '#64748B' }}>{r.bengkel}</td>
                   <td style={{ fontSize: 10 }}>
                     {r.next_service_tgl} / {r.next_service_km} km
                   </td>
-                  <td style={{ fontSize: 10, color: '#64748B' }}>{r.bengkel}</td>
-                  <td>
-                    <button type="button" className="btn btn-act btn-outline-primary me-1" onClick={() => openEdit(rowsMap[r.id] || r)}>
-                      ✎
+                  <td className="text-nowrap">
+                    <button type="button" className="btn btn-act btn-outline-primary me-1" onClick={() => openEdit(rowsMap[r.id] || r)} title="Edit">
+                      <i className="bi bi-pencil" />
                     </button>
-                    <button type="button" className="btn btn-act btn-outline-danger" onClick={() => onDelete(r.id)}>
-                      🗑
+                    <button type="button" className="btn btn-act btn-outline-danger" onClick={() => onDelete(r.id)} title="Hapus">
+                      <i className="bi bi-trash" />
                     </button>
                   </td>
                 </tr>
@@ -314,20 +351,61 @@ export function RentalMaintenancePageContent() {
                 <input value={form.deskripsi} onChange={(e) => setForm((f) => ({ ...f, deskripsi: e.target.value }))} className="form-control form-control-sm" />
               </div>
               <div className="col-md-3">
-                <label className="fl">Biaya Service</label>
-                <input type="number" value={form.biaya} onChange={(e) => setForm((f) => ({ ...f, biaya: e.target.value }))} className="form-control form-control-sm" />
+                <label className="fl">Biaya Servis (Rp)</label>
+                <input
+                  type="number"
+                  value={form.biaya_servis}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya_servis: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="0"
+                  min={0}
+                  step={1}
+                />
               </div>
               <div className="col-md-3">
-                <label className="fl">Biaya Fuel</label>
-                <input type="number" value={form.biaya_fuel} onChange={(e) => setForm((f) => ({ ...f, biaya_fuel: e.target.value }))} className="form-control form-control-sm" />
+                <label className="fl">Biaya Fuel (Rp)</label>
+                <input
+                  type="number"
+                  value={form.biaya_fuel}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya_fuel: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="Biaya bahan bakar"
+                  min={0}
+                />
               </div>
               <div className="col-md-3">
-                <label className="fl">Biaya Tol</label>
-                <input type="number" value={form.biaya_tol} onChange={(e) => setForm((f) => ({ ...f, biaya_tol: e.target.value }))} className="form-control form-control-sm" />
+                <label className="fl">Biaya Tol (Rp)</label>
+                <input
+                  type="number"
+                  value={form.biaya_tol}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya_tol: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="Biaya tol jalan"
+                  min={0}
+                />
               </div>
               <div className="col-md-3">
-                <label className="fl">Biaya Konsumsi</label>
-                <input type="number" value={form.biaya_konsumsi} onChange={(e) => setForm((f) => ({ ...f, biaya_konsumsi: e.target.value }))} className="form-control form-control-sm" />
+                <label className="fl">Biaya Konsumsi (Rp)</label>
+                <input
+                  type="number"
+                  value={form.biaya_konsumsi}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya_konsumsi: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="Biaya konsumsi/makanan"
+                  min={0}
+                />
+              </div>
+              <div className="col-md-3">
+                <label className="fl">Biaya Total (Rp) *</label>
+                <input
+                  type="number"
+                  value={form.biaya}
+                  onChange={(e) => setForm((f) => ({ ...f, biaya: e.target.value }))}
+                  className="form-control form-control-sm"
+                  placeholder="Total biaya"
+                  min={0}
+                  required
+                />
               </div>
               <div className="col-md-3">
                 <label className="fl">Liter Fuel</label>

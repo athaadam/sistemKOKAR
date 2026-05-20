@@ -79,18 +79,20 @@ export function ModalFooter({
   onSubmit,
   saving,
   submitLabel = 'Simpan',
+  disabled = false,
 }: {
   onCancel: () => void;
   onSubmit?: () => void;
   saving?: boolean;
   submitLabel?: string;
+  disabled?: boolean;
 }) {
   return (
     <div className="modal-footer">
       <button type="button" className="btn btn-sm btn-outline-secondary" onClick={onCancel}>
         Batal
       </button>
-      <button type="submit" className="btn btn-sm btn-navy" disabled={saving} onClick={onSubmit}>
+      <button type="submit" className="btn btn-sm btn-navy" disabled={saving || disabled} onClick={onSubmit}>
         {saving ? 'Menyimpan...' : submitLabel}
       </button>
     </div>

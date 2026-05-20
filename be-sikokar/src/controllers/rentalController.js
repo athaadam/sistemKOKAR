@@ -164,7 +164,14 @@ router.post('/maintenance', accessRequired('rental'), asyncHandler(async (req, r
   try {
     const f = req.body;
     const mid = String(f.id || '').trim();
-    const biaya = (Number(f.biaya) || 0) + (Number(f.biaya_fuel) || 0) + (Number(f.biaya_tol) || 0) + (Number(f.biaya_konsumsi) || 0);
+
+    // Parse semua nilai biaya dari frontend
+    const biaya_servis = Number(f.biaya_servis) || 0;
+    const biaya_total = Number(f.biaya) || 0;
+    const biaya_fuel = Number(f.biaya_fuel) || 0;
+    const biaya_tol = Number(f.biaya_tol) || 0;
+    const biaya_konsumsi = Number(f.biaya_konsumsi) || 0;
+
     const jenis_val = String(f.jenis || '').trim();
     if (jenis_val) {
       const ex = await Q("SELECT id FROM ref_option WHERE group_key='maintenance_jenis' AND value=?", [jenis_val], true);
@@ -172,22 +179,24 @@ router.post('/maintenance', accessRequired('rental'), asyncHandler(async (req, r
         await X('INSERT IGNORE INTO ref_option(id,group_key,value,label,aktif) VALUES(?,?,?,?,1)', [uid(), 'maintenance_jenis', jenis_val, jenis_val]);
       }
     }
+
     const vals = [
-      f.tgl || today(), f.jenis, f.deskripsi, biaya, Number(f.km_saat_ini) || 0, Number(f.next_service_km) || 0,
-      f.next_service_tgl || '', f.bengkel || '', f.catatan || '', Number(f.biaya_fuel) || 0, Number(f.biaya_tol) || 0,
-      Number(f.biaya_konsumsi) || 0, Number(f.liter_fuel) || 0, Number(f.km_per_liter) || 0,
+      f.tgl || today(), f.jenis, f.deskripsi, biaya_servis, biaya_total, Number(f.km_saat_ini) || 0, Number(f.next_service_km) || 0,
+      f.next_service_tgl || '', f.bengkel || '', f.catatan || '', biaya_fuel, biaya_tol,
+      biaya_konsumsi, Number(f.liter_fuel) || 0, Number(f.km_per_liter) || 0,
     ];
+
     if (mid) {
       await X(
-        `UPDATE rental_maintenance SET tgl=?,jenis=?,deskripsi=?,biaya=?,km_saat_ini=?,
+        `UPDATE rental_maintenance SET tgl=?,jenis=?,deskripsi=?,biaya_servis=?,biaya=?,km_saat_ini=?,
          next_service_km=?,next_service_tgl=?,bengkel=?,catatan=?,biaya_fuel=?,biaya_tol=?,biaya_konsumsi=?,liter_fuel=?,km_per_liter=? WHERE id=?`,
         [...vals, mid],
       );
     } else {
       await X(
-        `INSERT INTO rental_maintenance (id,kendaraan_id,tgl,jenis,deskripsi,biaya,
+        `INSERT INTO rental_maintenance (id,kendaraan_id,tgl,jenis,deskripsi,biaya_servis,biaya,
          km_saat_ini,next_service_km,next_service_tgl,bengkel,catatan,user_id,biaya_fuel,biaya_tol,biaya_konsumsi,liter_fuel,km_per_liter)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [uid(), f.kendaraan_id, ...vals, req.session.user.id],
       );
     }

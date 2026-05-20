@@ -107,6 +107,38 @@ export function PinjamanPageContent() {
 
   const pinAktif = useMemo(() => rows.filter((r) => r.status === 'aktif').length, [rows]);
 
+  const limitValidation = useMemo(() => {
+    if (!ajukan.anggota_id) return { valid: true, message: '' };
+
+    const anggota = anggotaList.find((x) => x.id === ajukan.anggota_id);
+    if (!anggota) return { valid: true, message: '' };
+
+    const nominal = Number(ajukan.nominal) || 0;
+    if (nominal <= 0) return { valid: true, message: '' };
+
+    if (ajukan.jenis === 'regular') {
+      // Regular loans: check both limit_pinjaman and max_loans
+      const maxLoans = anggota.max_loans ?? 5;
+      const pinjamanAktifReg = rows.filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif' && r.jenis === 'regular').length;
+      const sisaPinjaman = Math.max(0, maxLoans - pinjamanAktifReg);
+
+      const limitKredit = anggota.limit_pinjaman ?? 0;
+      const pinjamanAktifTotal = rows.filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif').reduce((sum, r) => sum + r.nominal, 0);
+      const sisaLimit = Math.max(0, limitKredit - pinjamanAktifTotal);
+
+      if (sisaPinjaman <= 0) {
+        return { valid: false, message: '❌ Sudah mencapai batas maksimal pinjaman reguler' };
+      }
+      if (nominal > sisaLimit) {
+        return { valid: false, message: `❌ Nominal melebihi sisa limit kredit (Sisa: Rp ${fmtRp(sisaLimit)})` };
+      }
+      return { valid: true, message: `✓ Sisa pinjaman: ${sisaPinjaman - 1}/${maxLoans} | Sisa limit: Rp ${fmtRp(sisaLimit - nominal)}` };
+    } else {
+      // Emergency loans: not affected by limit_pinjaman or max_loans
+      return { valid: true, message: '✓ Pinjaman darurat tidak dibatasi oleh limit reguler' };
+    }
+  }, [ajukan.anggota_id, ajukan.jenis, ajukan.nominal, anggotaList, rows]);
+
   const angsuranEst = useMemo(
     () =>
       calcAngsuranEst(
@@ -168,8 +200,15 @@ export function PinjamanPageContent() {
   function onAnggotaChange(aid: string) {
     const a = anggotaList.find((x) => x.id === aid);
     if (a) {
+      const maxLoans = a.max_loans ?? 5;
+      const pinjamanAktifReg = rows.filter((r) => r.anggota_id === aid && r.status === 'aktif' && r.jenis === 'regular').length;
+      const sisaPinjaman = Math.max(0, maxLoans - pinjamanAktifReg);
+      const limitKredit = a.limit_pinjaman ?? 0;
+      const pinjamanAktifTotal = rows.filter((r) => r.anggota_id === aid && r.status === 'aktif').reduce((sum, r) => sum + r.nominal, 0);
+      const sisaLimit = Math.max(0, limitKredit - pinjamanAktifTotal);
+
       setPinInfo(
-        `Limit Regular: Rp ${fmtRp(a.limit_pinjaman)} | Limit Darurat: Rp ${fmtRp(a.limit_darurat)} | Max Pinjaman: ${a.max_loans ?? 5}`,
+        `Regular - Limit Kredit: Rp ${fmtRp(limitKredit)} (Sisa: Rp ${fmtRp(sisaLimit)}) | Sisa Max Pinjaman: ${sisaPinjaman}/${maxLoans} | Emergency - Limit: Rp ${fmtRp(a.limit_darurat)}`,
       );
     } else {
       setPinInfo('');
@@ -180,6 +219,14 @@ export function PinjamanPageContent() {
   async function onAjukan(e: FormEvent) {
     e.preventDefault();
     if (!ajukan.anggota_id || !ajukan.nominal) return;
+
+    // Validate limits
+    if (!limitValidation.valid) {
+      setFlash(limitValidation.message);
+      setFlashType('danger');
+      return;
+    }
+
     setSaving(true);
     try {
       const r = await api.post<{ message?: string }>('/pinjaman/ajukan', {
@@ -558,8 +605,8 @@ export function PinjamanPageContent() {
               </div>
               {pinInfo && (
                 <div className="col-12">
-                  <div className="p-2 rounded" style={{ background: '#EFF6FF', fontSize: 12, color: '#1D4ED8' }}>
-                    {pinInfo}
+                  <div className="p-3 rounded" style={{ background: '#EFF6FF', border: '2px solid #3B82F6', fontSize: 12, color: '#1D4ED8', fontWeight: 500 }}>
+                    ℹ️ {pinInfo}
                   </div>
                 </div>
               )}
@@ -636,9 +683,14 @@ export function PinjamanPageContent() {
                   </b>
                 </div>
               </div>
+              <div className="col-12">
+                <div style={{ fontSize: 12, background: limitValidation.valid ? '#F0FDF4' : '#FEE2E2', border: `1px solid ${limitValidation.valid ? '#86EFAC' : '#FCA5A5'}`, borderRadius: 6, padding: '8px 12px', color: limitValidation.valid ? '#16A34A' : '#DC2626' }}>
+                  {limitValidation.message}
+                </div>
+              </div>
             </div>
           </div>
-          <ModalFooter onCancel={() => setShowAjukan(false)} saving={saving} submitLabel="Proses Pengajuan" />
+          <ModalFooter onCancel={() => setShowAjukan(false)} saving={saving} submitLabel="Proses Pengajuan" disabled={!limitValidation.valid && Number(ajukan.nominal) > 0} />
         </form>
       </Modal>
 

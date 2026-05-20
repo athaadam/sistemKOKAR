@@ -91,6 +91,36 @@ export default function SupplierPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  function validateSupplierForm(): string | null {
+    // Validasi NPWP hanya angka, min 10, max 21
+    if (form.npwp) {
+      if (!/^\d*$/.test(form.npwp)) {
+        return 'NPWP hanya boleh berisi angka';
+      }
+      if (form.npwp.length < 10) {
+        return 'NPWP minimal 10 angka';
+      }
+      if (form.npwp.length > 21) {
+        return 'NPWP maksimal 21 angka';
+      }
+    }
+
+    // Validasi telepon hanya angka, min 8, max 13
+    if (form.telp) {
+      if (!/^\d*$/.test(form.telp)) {
+        return 'Telepon hanya boleh berisi angka';
+      }
+      if (form.telp.length < 8) {
+        return 'Telepon minimal 8 angka';
+      }
+      if (form.telp.length > 13) {
+        return 'Telepon maksimal 13 angka';
+      }
+    }
+
+    return null;
+  }
+
   function openAdd() {
     setModalTitle('Tambah Supplier');
     setForm({ ...EMPTY });
@@ -105,6 +135,14 @@ export default function SupplierPage() {
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
+    
+    const validationError = validateSupplierForm();
+    if (validationError) {
+      setFlash(validationError);
+      setFlashType('danger');
+      return;
+    }
+
     setSaving(true);
     setFlash('');
     try {
@@ -318,9 +356,10 @@ export default function SupplierPage() {
                 <label className="fl">NPWP</label>
                 <input
                   value={form.npwp}
-                  onChange={(e) => setField('npwp', e.target.value)}
+                  onChange={(e) => setField('npwp', e.target.value.replace(/\D/g, ''))}
                   className="form-control form-control-sm"
                   placeholder="xx.xxx.xxx.x-xxx.xxx"
+                  maxLength={21}
                 />
               </div>
               <div className="col-md-6 d-flex align-items-end pb-1">
@@ -349,8 +388,9 @@ export default function SupplierPage() {
                 <label className="fl">Telepon</label>
                 <input
                   value={form.telp}
-                  onChange={(e) => setField('telp', e.target.value)}
+                  onChange={(e) => setField('telp', e.target.value.replace(/\D/g, ''))}
                   className="form-control form-control-sm"
+                  maxLength={13}
                 />
               </div>
             </div>

@@ -270,16 +270,6 @@ export function SetorMassalPageContent() {
         <div className="card-body p-3">
           <div className="row g-2 align-items-end">
             <div className="col-auto">
-              <label className="fl">Bulan Setor</label>
-              <input
-                type="month"
-                className="form-control form-control-sm"
-                style={{ width: 165, borderRadius: 6 }}
-                value={bulan}
-                onChange={(e) => setBulan(e.target.value)}
-              />
-            </div>
-            <div className="col-auto">
               <label className="fl">Tanggal</label>
               <input
                 type="date"
