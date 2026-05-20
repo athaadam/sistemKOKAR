@@ -49,6 +49,7 @@ Login demo (setelah seed):
 ```powershell
 cd fe-sikokar
 copy .env.local.example .env.local
+npm install lucide-react
 npm install
 npm run dev
 ```
