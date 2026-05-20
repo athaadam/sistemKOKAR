@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type JasaHistory = {
   no: string;
@@ -88,7 +89,10 @@ export function JasaSimpananPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Jasa Simpanan</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.jasaSimpanan_custom} size={24} style={{ marginRight: 8 }} />
+            Jasa Simpanan
+          </h2>
           <p>
             Distribusi bunga jasa simpanan ke anggota — Rate default: <b>{rate}%/tahun</b>
           </p>

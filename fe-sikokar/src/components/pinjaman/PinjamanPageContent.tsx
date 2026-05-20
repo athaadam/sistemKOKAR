@@ -7,6 +7,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type PinjamanRow = {
   id: string;
@@ -352,7 +353,10 @@ export function PinjamanPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Pinjaman Anggota</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.pinjaman_custom} size={24} style={{ marginRight: 8 }} />
+            Pinjaman Anggota
+          </h2>
           <p>
             Bunga Regular <b>{bungaReg}%</b>/bln · Darurat <b>{bungaDar}%</b>/bln · {rows.length} pinjaman
           </p>

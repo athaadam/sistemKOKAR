@@ -6,6 +6,7 @@ import { today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type DokRow = {
   id: string;
@@ -106,7 +107,10 @@ export function RentalDokumenPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>📄 Dokumen Rental</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.documentRental_custom} size={24} style={{ marginRight: 8 }} />
+            Dokumen Rental
+          </h2>
           <p>STNK, BPKB, kontrak, dan dokumen lainnya</p>
         </div>
         <div className="pg-hdr-right no-print">

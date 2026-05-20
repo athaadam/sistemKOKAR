@@ -6,6 +6,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type Supplier = { id: string; nama: string };
 type Lokasi = { id: string; nama: string };
@@ -230,7 +231,10 @@ export function PembelianPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Pembelian Barang</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.pembelian_custom} size={24} style={{ marginRight: 8 }} />
+            Pembelian Barang
+          </h2>
           <p>{rows.length} transaksi ditemukan</p>
         </div>
         <div className="pg-hdr-right no-print">

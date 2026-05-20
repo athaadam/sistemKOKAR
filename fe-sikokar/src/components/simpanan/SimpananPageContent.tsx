@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ModalFooter } from '@/components/crud/ListPageChrome';
 
@@ -194,7 +195,10 @@ export function SimpananPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Simpanan Anggota</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.simpanan_custom} size={24} style={{ marginRight: 8 }} />
+            Simpanan Anggota
+          </h2>
           <p>{rows.length} anggota</p>
         </div>
         <div className="pg-hdr-right no-print">

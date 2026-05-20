@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ListPageHeader, ModalFooter } from '@/components/crud/ListPageChrome';
+import { ICON_MAP } from '@/components/ui/IconRenderer';
 
 type SupplierRow = {
   id: string;
@@ -171,7 +172,7 @@ export default function SupplierPage() {
       {flash && <Flash message={flash} type={flashType} onClose={() => setFlash('')} />}
 
       <ListPageHeader
-        icon="🏢"
+        icon={ICON_MAP.supplier_custom}
         title="Data Supplier"
         subtitle={`${rows.length} supplier`}
         exportPath="/supplier/export"

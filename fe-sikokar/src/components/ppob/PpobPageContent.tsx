@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type PpobService = { id: string; label: string; icon: string; fee: number; jenis: string };
 type PpobRow = {
@@ -85,7 +86,10 @@ export function PpobPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>PPOB — Pembayaran Online</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.ppob_custom} size={24} style={{ marginRight: 8 }} />
+            PPOB — Pembayaran Online
+          </h2>
           <p>
             Total Fee: <b>Rp {fmtRp(rekap.fee_total)}</b> · Volume: Rp {fmtRp(rekap.vol)} · {rekap.cnt || 0}{' '}
             transaksi

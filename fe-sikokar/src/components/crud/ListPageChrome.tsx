@@ -1,6 +1,7 @@
 'use client';
 
 import { api } from '@/lib/api';
+import { IconRenderer, type IconConfig } from '@/components/ui/IconRenderer';
 
 const btnStyle = { borderRadius: 6, fontSize: 12 };
 
@@ -13,7 +14,7 @@ export function ListPageHeader({
   onAdd,
   addLabel = 'Tambah',
 }: {
-  icon: string;
+  icon: string | IconConfig;
   title: string;
   subtitle: string;
   exportPath: string;
@@ -21,11 +22,17 @@ export function ListPageHeader({
   onAdd: () => void;
   addLabel?: string;
 }) {
+  const iconEl = typeof icon === 'string' ? (
+    <span>{icon}</span>
+  ) : (
+    <IconRenderer icon={icon} size={24} style={{ marginRight: 8 }} />
+  );
+
   return (
     <div className="pg-hdr">
       <div className="pg-hdr-left">
-        <h2>
-          {icon} {title}
+        <h2 style={{ display: 'flex', alignItems: 'center' }}>
+          {iconEl} {title}
         </h2>
         <p>{subtitle}</p>
       </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { fmtRp, today, bulanIni } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type AnggotaRow = {
   id: string;
@@ -249,7 +250,10 @@ export function SetorMassalPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Setor Massal Simpanan</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.setorMassal_custom} size={24} style={{ marginRight: 8 }} />
+            Setor Massal Simpanan
+          </h2>
           <p>{anggotaList.length} anggota aktif</p>
         </div>
         <div className="pg-hdr-right no-print">

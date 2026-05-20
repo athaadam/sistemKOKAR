@@ -6,6 +6,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type KreditRow = {
   id: string;
@@ -314,7 +315,10 @@ export function KreditPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>Kredit Motor & Elektronik</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.pinjaman_custom} size={24} style={{ marginRight: 8 }} />
+            Kredit Motor & Elektronik
+          </h2>
           <p>
             Outstanding: <b>Rp {fmtRp(totalOutstanding)}</b> · Angsuran/bln: <b>Rp {fmtRp(totalAngsuran)}</b>
           </p>

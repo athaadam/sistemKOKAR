@@ -37,55 +37,58 @@ export const MENU_URLS: Record<string, string> = {
   rental_dokumen: '/rental/dokumen',
 };
 
-export type MenuItem = { id: string; icon: string; label: string };
+import type { IconConfig } from '@/components/ui/IconRenderer';
+import { ICON_MAP } from '@/components/ui/IconRenderer';
+
+export type MenuItem = { id: string; icon: IconConfig; label: string };
 
 export const MENU_TREE: { section: string; items: MenuItem[] }[] = [
-  { section: 'Utama', items: [{ id: 'dashboard', icon: 'bi-speedometer2', label: 'Dashboard' }] },
+  { section: 'Utama', items: [{ id: 'dashboard', icon: ICON_MAP.dashboard, label: 'Dashboard' }] },
   {
     section: 'Master Data',
     items: [
-      { id: 'anggota', icon: 'bi-people-fill', label: 'Anggota' },
-      { id: 'barang', icon: 'bi-box-seam', label: 'Barang & Stok' },
-      { id: 'supplier', icon: 'bi-building', label: 'Supplier' },
-      { id: 'coa', icon: 'bi-journal-bookmark', label: 'Chart of Accounts' },
+      { id: 'anggota', icon: ICON_MAP.usersRound_custom, label: 'Anggota' },
+      { id: 'barang', icon: ICON_MAP.package_custom, label: 'Barang & Stok' },
+      { id: 'supplier', icon: ICON_MAP.supplier_custom, label: 'Supplier' },
+      { id: 'coa', icon: ICON_MAP.chartofaccount_custom, label: 'Chart of Accounts' },
     ],
   },
   {
     section: 'Operasional',
     items: [
-      { id: 'toko', icon: 'bi-cart3', label: 'Toko / POS' },
-      { id: 'toko_riwayat', icon: 'bi-clock-history', label: 'History Penjualan' },
-      { id: 'pembelian', icon: 'bi-receipt', label: 'Pembelian' },
+      { id: 'toko', icon: ICON_MAP.store_custom, label: 'Toko / POS' },
+      { id: 'toko_riwayat', icon: ICON_MAP.history_custom, label: 'History Penjualan' },
+      { id: 'pembelian', icon: ICON_MAP.pembelian_custom, label: 'Pembelian' },
     ],
   },
   {
     section: 'Keuangan',
     items: [
-      { id: 'simpanan', icon: 'bi-piggy-bank', label: 'Simpanan' },
-      { id: 'simpanan_massal', icon: 'bi-people', label: 'Setor Massal' },
-      { id: 'simpanan_jasa', icon: 'bi-percent', label: 'Jasa Simpanan' },
-      { id: 'pinjaman', icon: 'bi-credit-card', label: 'Pinjaman' },
-      { id: 'kredit', icon: 'bi-cart-check', label: 'Kredit Motor & Elektronik' },
-      { id: 'ppob', icon: 'bi-lightning-charge', label: 'PPOB' },
-      { id: 'usaha', icon: 'bi-shop', label: 'Catering/Usaha Lain' },
-      { id: 'rental', icon: 'bi-car-front', label: 'Rental Kendaraan' },
-      { id: 'rental_maintenance', icon: 'bi-tools', label: 'Maintenance Rental' },
-      { id: 'rental_dokumen', icon: 'bi-file-earmark-text', label: 'Dokumen Rental' },
+      { id: 'simpanan', icon: ICON_MAP.simpanan_custom, label: 'Simpanan' },
+      { id: 'simpanan_massal', icon: ICON_MAP.setorMassal_custom, label: 'Setor Massal' },
+      { id: 'simpanan_jasa', icon: ICON_MAP.jasaSimpanan_custom, label: 'Jasa Simpanan' },
+      { id: 'pinjaman', icon: ICON_MAP.pinjaman_custom, label: 'Pinjaman' },
+      { id: 'kredit', icon: ICON_MAP.pinjaman_custom, label: 'Kredit Motor & Elektronik' },
+      { id: 'ppob', icon: ICON_MAP.ppob_custom, label: 'PPOB' },
+      { id: 'usaha', icon: ICON_MAP.catering_custom, label: 'Catering/Usaha Lain' },
+      { id: 'rental', icon: ICON_MAP.rental_custom, label: 'Rental Kendaraan' },
+      { id: 'rental_maintenance', icon: ICON_MAP.maintenance_custom, label: 'Maintenance Rental' },
+      { id: 'rental_dokumen', icon: ICON_MAP.documentRental_custom, label: 'Dokumen Rental' },
     ],
   },
   {
     section: 'Manajemen',
     items: [
-      { id: 'pembukuan', icon: 'bi-clipboard-data', label: 'Pembukuan' },
-      { id: 'aset', icon: 'bi-building', label: 'Aset Tetap' },
-      { id: 'pinjaman_kol', icon: 'bi-people-fill', label: 'Kolektif Potong Gaji' },
-      { id: 'labor', icon: 'bi-people-fill', label: 'Labor Supply' },
-      { id: 'kwitansi', icon: 'bi-receipt', label: 'Kwitansi & Invoice' },
-      { id: 'promo', icon: 'bi-tag', label: 'Promo & Diskon' },
-      { id: 'laporan', icon: 'bi-bar-chart-line', label: 'Laporan & Analisis' },
-      { id: 'konsolidasi', icon: 'bi-table', label: 'Laporan Konsolidasi' },
-      { id: 'summary_gaji', icon: 'bi-file-earmark-text', label: 'Summary Potongan Gaji' },
-      { id: 'setting', icon: 'bi-gear', label: 'Pengaturan' },
+      { id: 'pembukuan', icon: ICON_MAP.pembukuan_custom, label: 'Pembukuan' },
+      { id: 'aset', icon: ICON_MAP.store_custom, label: 'Aset Tetap' },
+      { id: 'pinjaman_kol', icon: ICON_MAP.setorMassal_custom, label: 'Kolektif Potong Gaji' },
+      { id: 'labor', icon: ICON_MAP.setorMassal_custom, label: 'Labor Supply' },
+      { id: 'kwitansi', icon: ICON_MAP.kwitansi_custom, label: 'Kwitansi & Invoice' },
+      { id: 'promo', icon: ICON_MAP.tag, label: 'Promo & Diskon' },
+      { id: 'laporan', icon: ICON_MAP.barChartLine, label: 'Laporan & Analisis' },
+      { id: 'konsolidasi', icon: ICON_MAP.table, label: 'Laporan Konsolidasi' },
+      { id: 'summary_gaji', icon: ICON_MAP.document, label: 'Summary Potongan Gaji' },
+      { id: 'setting', icon: ICON_MAP.gear, label: 'Pengaturan' },
     ],
   },
 ];

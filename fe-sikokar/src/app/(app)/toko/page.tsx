@@ -6,6 +6,7 @@ import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type Product = {
   id: string;
@@ -359,21 +360,24 @@ export default function TokoPage() {
         {/* LEFT: products */}
         <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
           <div className="d-flex gap-2 mb-3 flex-wrap align-items-center">
-            <select
-              className="form-select form-select-sm"
-              style={{ width: 180, borderRadius: 6 }}
-              value={lokasiId}
-              onChange={(e) => {
-                setLokasiId(e.target.value);
-                setCart([]);
-              }}
-            >
-              {lokasiList.map((l) => (
-                <option key={l.id} value={l.id}>
-                  🏪 {l.nama}
-                </option>
-              ))}
-            </select>
+            <div className="d-flex align-items-center gap-2">
+              <IconRenderer icon={ICON_MAP.store_custom} size={16} />
+              <select
+                className="form-select form-select-sm"
+                style={{ width: 180, borderRadius: 6 }}
+                value={lokasiId}
+                onChange={(e) => {
+                  setLokasiId(e.target.value);
+                  setCart([]);
+                }}
+              >
+                {lokasiList.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.nama}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div
               className="d-flex align-items-center gap-2 flex-grow-1"
               style={{
@@ -384,7 +388,7 @@ export default function TokoPage() {
                 maxWidth: 320,
               }}
             >
-              <span style={{ fontSize: 16 }}>📷</span>
+              <IconRenderer icon={ICON_MAP.scanBarcode_custom} size={16} />
               <input
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
@@ -506,8 +510,9 @@ export default function TokoPage() {
           }}
         >
           <div className="px-3 py-2 border-bottom d-flex justify-content-between align-items-center">
-            <span className="fw-bold" style={{ fontSize: 13.5 }}>
-              🛒 Keranjang
+            <span className="fw-bold" style={{ fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <IconRenderer icon={ICON_MAP.shoppingCart_custom} size={16} />
+              Keranjang
             </span>
             <span className="bd bd-navy">{cartQty} item</span>
           </div>

@@ -6,6 +6,7 @@ import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ListPageHeader, ModalFooter } from '@/components/crud/ListPageChrome';
+import { ICON_MAP } from '@/components/ui/IconRenderer';
 
 const KAT_STD = [
   'Sembako',
@@ -249,7 +250,7 @@ export default function BarangPage() {
       {flash && <Flash message={flash} type={flashType} onClose={() => setFlash('')} />}
 
       <ListPageHeader
-        icon="📦"
+        icon={ICON_MAP.package_custom}
         title="Barang & Stok"
         subtitle={`${rows.length} barang ditemukan`}
         exportPath="/barang/export"

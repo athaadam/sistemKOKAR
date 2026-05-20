@@ -6,6 +6,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 import { PembukuanSubNav } from './PembukuanSubNav';
 
 type TabId = 'jurnal' | 'neraca' | 'laba_rugi' | 'shu';
@@ -280,7 +281,10 @@ export function PembukuanPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>📚 Pembukuan Koperasi</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.pembukuan_custom} size={24} style={{ marginRight: 8 }} />
+            Pembukuan Koperasi
+          </h2>
           <p>Jurnal · Neraca · Laba Rugi · SHU</p>
         </div>
         <div className="pg-hdr-right no-print">

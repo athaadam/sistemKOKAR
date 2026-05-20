@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type Kwitansi = {
   id: string;
@@ -100,7 +101,10 @@ export function KwitansiListPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>🧾 Kwitansi & Invoice</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.kwitansi_custom} size={24} style={{ marginRight: 8 }} />
+            Kwitansi & Invoice
+          </h2>
           <p>
             {rows.length} dokumen · Bulan ini: <b>Rp {fmtRp(totalMonth)}</b>
           </p>

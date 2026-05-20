@@ -6,6 +6,7 @@ import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ListPageHeader, ModalFooter } from '@/components/crud/ListPageChrome';
+import { ICON_MAP } from '@/components/ui/IconRenderer';
 
 const TIPE_OPTIONS = ['aset', 'kewajiban', 'ekuitas', 'pendapatan', 'beban'] as const;
 
@@ -181,7 +182,7 @@ export default function CoaPage() {
       {flash && <Flash message={flash} type={flashType} onClose={() => setFlash('')} />}
 
       <ListPageHeader
-        icon="📒"
+        icon={ICON_MAP.chartofaccount_custom}
         title="Chart of Accounts (COA)"
         subtitle={`${rows.length} akun`}
         exportPath="/coa/export"

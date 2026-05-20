@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api';
 import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 import { Modal } from '@/components/crud/Modal';
 import { ImportModalBody, ModalFooter } from '@/components/crud/ListPageChrome';
 
@@ -240,7 +241,10 @@ export default function TokoRiwayatPage() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>History Penjualan</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.history_custom} size={24} style={{ marginRight: 8 }} />
+            History Penjualan
+          </h2>
           <p>{rows.length} transaksi — Total Rp {fmtRp(total)}</p>
         </div>
         <div className="pg-hdr-right no-print">
