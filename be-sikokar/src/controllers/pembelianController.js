@@ -35,6 +35,7 @@ router.post('/save', accessRequired('pembelian'), asyncHandler(async (req, res) 
   try {
     const f = req.body;
     let pb_id = String(f.id || '').trim();
+    const isEdit = Boolean(pb_id);
     const tgl = f.tgl || today();
     const sup = f.supplier_id;
     const lok = f.lokasi_id || 'L1';
@@ -97,7 +98,7 @@ router.post('/save', accessRequired('pembelian'), asyncHandler(async (req, res) 
         await X('INSERT INTO stok (id,barang_id,lokasi_id,jumlah) VALUES (?,?,?,?)', [uid(), bid, lok, qty]);
       }
     }
-    return jsonOk(res, {}, pb_id ? 'Pembelian diperbarui' : 'Pembelian disimpan');
+    return jsonOk(res, {}, isEdit ? 'Pembelian diperbarui' : 'Pembelian disimpan');
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }

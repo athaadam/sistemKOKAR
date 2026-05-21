@@ -7,17 +7,18 @@ import { api } from '@/lib/api';
 import { fmtRp } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { ReportExportBar } from '@/components/report/ReportExportBar';
+import { IconRenderer, ICON_MAP, type IconConfig } from '@/components/ui/IconRenderer';
 
-const TABS: [string, string][] = [
-  ['toko', '🛒 Penjualan'],
-  ['pembelian', '🧾 Pembelian'],
-  ['stok', '📦 Stok'],
-  ['stok_opname', '📋 Stok Opname'],
-  ['simpanan', '🏦 Simpanan'],
-  ['pinjaman', '💳 Pinjaman'],
-  ['ppob', '⚡ PPOB'],
-  ['usaha', '🍱 Catering/Usaha Lain'],
-  ['kredit', '🏍️ Kredit Motor/Elek'],
+const TABS: { id: string; label: string; icon: IconConfig }[] = [
+  { id: 'toko', label: 'Penjualan', icon: ICON_MAP.history_custom },
+  { id: 'pembelian', label: 'Pembelian', icon: ICON_MAP.pembelian_custom },
+  { id: 'stok', label: 'Stok', icon: ICON_MAP.package_custom },
+  { id: 'stok_opname', label: 'Stok Opname', icon: ICON_MAP.chartofaccount_custom },
+  { id: 'simpanan', label: 'Simpanan', icon: ICON_MAP.simpanan_custom },
+  { id: 'pinjaman', label: 'Pinjaman', icon: ICON_MAP.pinjaman_custom },
+  { id: 'ppob', label: 'PPOB', icon: ICON_MAP.ppob_custom },
+  { id: 'usaha', label: 'Catering/Usaha Lain', icon: ICON_MAP.catering_custom },
+  { id: 'kredit', label: 'Kredit Motor/Elek', icon: ICON_MAP.pinjaman_custom },
 ];
 
 const DATE_TABS = new Set(['toko', 'pembelian', 'ppob', 'usaha']);
@@ -462,14 +463,17 @@ export function LaporanPageContent() {
     <>
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>📈 Laporan & Analisis</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.laporan_custom} size={24} style={{ marginRight: 8 }} />
+            Laporan & Analisis
+          </h2>
           <p>Filter data per periode & export</p>
         </div>
         <ReportExportBar exportPath={exportPath} />
       </div>
 
       <ul className="nav nav-tabs mb-0 no-print" style={{ borderBottom: 'none' }}>
-        {TABS.map(([id, label]) => (
+        {TABS.map(({ id, label, icon }) => (
           <li className="nav-item" key={id}>
             <button
               type="button"
@@ -484,7 +488,10 @@ export function LaporanPageContent() {
               }}
               onClick={() => goTab(id)}
             >
-              {label}
+              <span className="d-inline-flex align-items-center gap-1">
+                <IconRenderer icon={icon} size={16} />
+                {label}
+              </span>
             </button>
           </li>
         ))}

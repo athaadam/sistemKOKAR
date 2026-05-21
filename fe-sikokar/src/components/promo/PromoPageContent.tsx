@@ -6,6 +6,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
+import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
 
 type Promo = {
   id: string;
@@ -23,12 +24,16 @@ type Promo = {
   status: string;
 };
 
+type BarangOption = { id: string; nama: string; kategori?: string };
+type KategoriOption = { kategori: string };
+
 const EMPTY_FORM = {
   id: '',
   nama: '',
   tipe: 'persen',
   nilai: '',
   kategori: '',
+  barang_id: '',
   min_qty: '1',
   min_total: '0',
   member_only: false,
@@ -41,6 +46,8 @@ type FormType = typeof EMPTY_FORM;
 
 export function PromoPageContent() {
   const [rows, setRows] = useState<Promo[]>([]);
+  const [barangList, setBarangList] = useState<BarangOption[]>([]);
+  const [kategoriList, setKategoriList] = useState<KategoriOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
   const [flash, setFlash] = useState('');
@@ -53,8 +60,12 @@ export function PromoPageContent() {
     setLoading(true);
     setErr('');
     api
-      .get<{ rows: Promo[] }>('/promo')
-      .then((r) => setRows(r.rows || []))
+      .get<{ rows: Promo[]; barang_list?: BarangOption[]; kategori_list?: KategoriOption[] }>('/promo')
+      .then((r) => {
+        setRows(r.rows || []);
+        setBarangList(r.barang_list || []);
+        setKategoriList(r.kategori_list || []);
+      })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -75,6 +86,7 @@ export function PromoPageContent() {
       tipe: row.tipe || 'persen',
       nilai: String(row.nilai || 0),
       kategori: row.kategori || '',
+      barang_id: row.barang_id || '',
       min_qty: String(row.min_qty || 1),
       min_total: String(row.min_total || 0),
       member_only: !!row.member_only,
@@ -99,6 +111,7 @@ export function PromoPageContent() {
         nama: form.nama,
         tipe: form.tipe,
         nilai: Number(form.nilai) || 0,
+        barang_id: form.barang_id || '',
         kategori: form.kategori || '',
         min_qty: Number(form.min_qty) || 1,
         min_total: Number(form.min_total) || 0,
@@ -147,7 +160,10 @@ export function PromoPageContent() {
 
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>🏷️ Promo & Diskon</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center' }}>
+            <IconRenderer icon={ICON_MAP.voucher_custom} size={24} style={{ marginRight: 8 }} />
+            Promo & Diskon
+          </h2>
           <p>{rows.length} promo · Kelola promo per item, kategori, atau member</p>
         </div>
         <div className="pg-hdr-right no-print">
@@ -196,7 +212,7 @@ export function PromoPageContent() {
                     {row.tipe === 'persen' ? '%' : ''}
                   </td>
                   <td style={{ fontSize: 11 }}>
-                    {row.barang_nama || row.kategori || 'Semua'}
+                    {row.barang_nama || row.kategori || 'Semua barang'}
                     {row.member_only ? (
                       <span className="bd bd-gray ms-1">Member only</span>
                     ) : null}
@@ -271,13 +287,35 @@ export function PromoPageContent() {
               />
             </div>
             <div className="col-md-6">
-              <label className="fl">Kategori (opsional)</label>
-              <input
-                type="text"
-                className="form-control form-control-sm"
+              <label className="fl">Barang Tertentu</label>
+              <select
+                className="form-select form-select-sm"
+                value={form.barang_id}
+                onChange={(e) => setForm({ ...form, barang_id: e.target.value, kategori: e.target.value ? '' : form.kategori })}
+              >
+                <option value="">Semua barang</option>
+                {barangList.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nama}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="col-md-6">
+              <label className="fl">Kategori</label>
+              <select
+                className="form-select form-select-sm"
                 value={form.kategori}
                 onChange={(e) => setForm({ ...form, kategori: e.target.value })}
-              />
+                disabled={!!form.barang_id}
+              >
+                <option value="">Semua kategori</option>
+                {kategoriList.map((k) => (
+                  <option key={k.kategori} value={k.kategori}>
+                    {k.kategori}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-md-3">
               <label className="fl">Min Qty</label>

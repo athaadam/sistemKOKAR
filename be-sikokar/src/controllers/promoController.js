@@ -3,29 +3,24 @@ const { uid, jsonOk, jsonErr } = require('../utils/helpers');
 const { sendExport } = require('../utils/export');
 const { audit } = require('../utils/audit');
 
-function promoAccess(req, res, next) {
-  const { canAccess } = require('../constants/roleMenus');
-  if (!req.session?.user) return jsonErr(res, 'Login required', 401);
-  if (!canAccess(req.user, 'barang') && !canAccess(req.user, 'promo')) {
-    return jsonErr(res, 'Akses ditolak', 403);
-  }
-  next();
-}
-
 function registerRoutes(router, deps) {
-  const { asyncHandler } = deps;
-  router.get('/', promoAccess, asyncHandler(async (req, res) => {
+  const { asyncHandler, accessRequired } = deps;
+  router.get('/', accessRequired('promo'), asyncHandler(async (req, res) => {
   try {
     const rows = await Q(
       'SELECT p.*, b.nama as barang_nama FROM promo p LEFT JOIN barang b ON p.barang_id=b.id ORDER BY p.tgl_mulai DESC',
     );
-    return jsonOk(res, { rows });
+    const barang_list = await Q('SELECT id,nama,kategori FROM barang ORDER BY nama');
+    const kategori_list = await Q(
+      'SELECT DISTINCT kategori FROM barang WHERE kategori IS NOT NULL AND kategori<>"" ORDER BY kategori',
+    );
+    return jsonOk(res, { rows, barang_list, kategori_list });
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
 }));
 
-router.post('/save', promoAccess, asyncHandler(async (req, res) => {
+router.post('/save', accessRequired('promo'), asyncHandler(async (req, res) => {
   try {
     const f = req.body;
     const pid = String(f.id || '').trim();
@@ -64,7 +59,7 @@ router.post('/save', promoAccess, asyncHandler(async (req, res) => {
   }
 }));
 
-router.get('/export', promoAccess, asyncHandler(async (req, res) => {
+router.get('/export', accessRequired('promo'), asyncHandler(async (req, res) => {
   try {
     const fmt = req.query.fmt || 'xlsx';
     const rows = await Q(
@@ -77,7 +72,7 @@ router.get('/export', promoAccess, asyncHandler(async (req, res) => {
   }
 }));
 
-router.delete('/delete/:pid', promoAccess, asyncHandler(async (req, res) => {
+router.delete('/delete/:pid', accessRequired('promo'), asyncHandler(async (req, res) => {
   try {
     const pid = req.params.pid;
     await X('DELETE FROM promo WHERE id=?', [pid]);

@@ -30,8 +30,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const res = await fetch(`${API}${path}`, {
-    headers,
     ...init,
+    headers,
   });
   const json = (await res.json().catch(() => ({}))) as ApiResult<T>;
 

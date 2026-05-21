@@ -102,7 +102,12 @@ export const ICON_MAP = {
   documentRental_custom: { type: 'custom' as const, path: '/static/icons/DocumentRental.svg' },
   ppob_custom: { type: 'custom' as const, path: '/static/icons/PPOB.svg' },
   pembukuan_custom: { type: 'custom' as const, path: '/static/icons/Pembukuan.svg' },
+  neraca_custom: { type: 'custom' as const, path: '/static/icons/scale.svg' },
+  labaRugi_custom: { type: 'custom' as const, path: '/static/icons/labarugi.svg' },
+  shu_custom: { type: 'custom' as const, path: '/static/icons/SHU.svg' },
   kwitansi_custom: { type: 'custom' as const, path: '/static/icons/kwitansi.svg' },
+  laporan_custom: { type: 'custom' as const, path: '/static/icons/Laporan & analisis.svg' },
+  voucher_custom: { type: 'custom' as const, path: '/static/icons/voucher.svg' },
   scanBarcode_custom: { type: 'custom' as const, path: '/static/icons/scan-barcode.svg' },
   loginBg: { type: 'custom' as const, path: '/static/images/login-bg.png' },
 };

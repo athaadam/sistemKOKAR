@@ -15,6 +15,39 @@ const { audit } = require('../utils/audit');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
+function normalizePromoIds(data) {
+  const raw = Array.isArray(data.promo_ids)
+    ? data.promo_ids
+    : String(data.promo_ids || data.promo_id || '')
+      .split(',');
+  return [...new Set(raw.map((id) => String(id || '').trim()).filter(Boolean))];
+}
+
+function calculatePromoDiscount(pr, items, subtotal, anggotaId) {
+  const totalQty = items.reduce((s, it) => s + Number(it.qty), 0);
+  const memberOk = !Number(pr.member_only) || !!anggotaId;
+  if (!memberOk || totalQty < (Number(pr.min_qty) || 1) || subtotal < (Number(pr.min_total) || 0)) {
+    return 0;
+  }
+
+  const promoBarangId = String(pr.barang_id || '').trim();
+  const promoKategori = String(pr.kategori || '').trim();
+  let basis = 0;
+  for (const it of items) {
+    const itemKategori = String(it.kategori || '').trim();
+    const match =
+      (promoBarangId && promoBarangId === it.id) ||
+      (promoKategori && promoKategori === itemKategori) ||
+      (!promoBarangId && !promoKategori);
+    if (match) basis += Number(it.harga) * Number(it.qty);
+  }
+  if (basis <= 0) return 0;
+
+  return pr.tipe === 'persen'
+    ? Math.round((basis * (Number(pr.nilai) || 0)) / 100)
+    : Math.min(Number(pr.nilai) || 0, basis);
+}
+
 function registerRoutes(router, deps) {
   const { asyncHandler, accessRequired } = deps;
   router.get('/', accessRequired('toko'), asyncHandler(async (req, res) => {
@@ -99,8 +132,8 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
     const pkp = !!data.pkp;
     const items = data.items || [];
     const diskon_global = Number(data.diskon_global) || 0;
-    let promo_id = data.promo_id || '';
-    let promo_diskon = Number(data.promo_diskon) || 0;
+    let promo_id = '';
+    let promo_diskon = 0;
     const over_limit_approved = !!(data.over_limit_approved || data.approval_over_limit);
     const ppn_rate = await getPpnRate();
 
@@ -121,31 +154,24 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
       0,
     );
 
-    if (promo_id) {
-      const pr = await Q(
-        `SELECT * FROM promo WHERE id=? AND status='aktif' AND (tgl_mulai='' OR tgl_mulai<=?) AND (tgl_akhir='' OR tgl_akhir>=?)`,
-        [promo_id, today(), today()],
-        true,
-      );
-      if (pr) {
-        const total_qty = items.reduce((s, it) => s + Number(it.qty), 0);
-        const member_ok = !pr.member_only || !!anggota_id;
-        if (member_ok && total_qty >= (pr.min_qty || 1) && subtotal >= (pr.min_total || 0)) {
-          let basis = 0;
-          for (const it of items) {
-            const match =
-              (pr.barang_id && pr.barang_id === it.id) ||
-              (pr.kategori && pr.kategori === it.kategori) ||
-              (!pr.barang_id && !pr.kategori);
-            if (match) basis += Number(it.harga) * Number(it.qty);
-          }
-          const server_promo =
-            pr.tipe === 'persen'
-              ? Math.round((basis * pr.nilai) / 100)
-              : Math.min(Number(pr.nilai) || 0, basis);
-          promo_diskon = Math.min(Number(promo_diskon) || server_promo, server_promo);
-        } else promo_diskon = 0;
-      } else promo_diskon = 0;
+    const promoIds = normalizePromoIds(data);
+    if (promoIds.length) {
+      let serverPromo = 0;
+      const appliedPromoIds = [];
+      for (const pid of promoIds) {
+        const pr = await Q(
+          `SELECT * FROM promo WHERE id=? AND status='aktif' AND (tgl_mulai='' OR tgl_mulai<=?) AND (tgl_akhir='' OR tgl_akhir>=?)`,
+          [pid, today(), today()],
+          true,
+        );
+        if (!pr) continue;
+        const discount = calculatePromoDiscount(pr, items, subtotal, anggota_id);
+        if (discount <= 0) continue;
+        serverPromo += discount;
+        appliedPromoIds.push(pid);
+      }
+      promo_id = appliedPromoIds[0] || '';
+      promo_diskon = Math.min(Number(data.promo_diskon) || serverPromo, serverPromo);
     }
 
     let member_diskon_pct = 0;

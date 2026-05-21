@@ -6,7 +6,7 @@ import { fmtRp, today } from '@/lib/format';
 import { Flash } from '@/components/ui/Flash';
 import { Modal } from '@/components/crud/Modal';
 import { ModalFooter } from '@/components/crud/ListPageChrome';
-import { IconRenderer, ICON_MAP } from '@/components/ui/IconRenderer';
+import { IconRenderer, ICON_MAP, type IconConfig } from '@/components/ui/IconRenderer';
 import { PembukuanSubNav } from './PembukuanSubNav';
 
 type TabId = 'jurnal' | 'neraca' | 'laba_rugi' | 'shu';
@@ -49,14 +49,14 @@ type ShuData = {
   [key: string]: unknown;
 };
 
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'jurnal', label: '📝 Jurnal Umum' },
-  { id: 'neraca', label: '⚖️ Neraca' },
-  { id: 'laba_rugi', label: '📈 Laba Rugi' },
-  { id: 'shu', label: '🏆 SHU' },
-];
-
 const MODUL_OPTS = ['Kas', 'Bank', 'Simpan Pinjam', 'Toko', 'Operasional', 'Labor', 'Rental', 'PPOB', 'Umum'];
+
+const TABS: { id: TabId; label: string; icon: IconConfig }[] = [
+  { id: 'jurnal', label: 'Jurnal Umum', icon: ICON_MAP.pembukuan_custom },
+  { id: 'neraca', label: 'Neraca', icon: ICON_MAP.neraca_custom },
+  { id: 'laba_rugi', label: 'Laba Rugi', icon: ICON_MAP.labaRugi_custom },
+  { id: 'shu', label: 'SHU', icon: ICON_MAP.shu_custom },
+];
 
 const SHU_FORM = [
   { key: 'shu_cadangan_pct', label: 'Dana Cadangan', def: 8 },
@@ -324,7 +324,10 @@ export function PembukuanPageContent() {
               style={{ fontSize: 13, borderRadius: '6px 6px 0 0' }}
               onClick={() => setTab(t.id)}
             >
-              {t.label}
+              <span className="d-inline-flex align-items-center gap-1">
+                <IconRenderer icon={t.icon} size={16} />
+                {t.label}
+              </span>
             </button>
           </li>
         ))}

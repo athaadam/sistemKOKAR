@@ -18,14 +18,17 @@
 }
 
 body {
-  font-family: 'Manrope', 'Segoe UI', sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 14px;
   font-weight: 400;
   background: var(--neutral-bg);
   margin: 0;
   overflow-x: hidden;
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.5;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 #sidebar {
@@ -93,7 +96,7 @@ body {
   font-size: 18px;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 
 .content {
@@ -239,7 +242,7 @@ body {
 }
 
 .mono {
-  font-family: ui-monospace, monospace;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', ui-monospace, monospace;
   font-size: 12px;
 }
 
