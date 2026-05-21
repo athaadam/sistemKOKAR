@@ -747,7 +747,7 @@ export default function TokoPage() {
                   {piutang && (
                     <>
                       <div className="d-flex justify-content-between mt-1">
-                        <span>Sisa limit</span>
+                        <span>Sisa limit kredit toko</span>
                         <b>{rp(piutang.available)}</b>
                       </div>
                       <div className="prog mt-1">
