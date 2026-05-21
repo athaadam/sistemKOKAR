@@ -3,6 +3,7 @@ const { today, jsonOk, jsonErr } = require('../utils/helpers');
 const { accessRequired } = require('../middleware/auth');
 const { getLimitKreditToko, getPrintHeader } = require('../utils/settings');
 const { sendExport } = require('../utils/export');
+const { getPototongGajiTransactions, getAllPototongGajiTransactions } = require('../utils/transactionUtils');
 
 async function loadTabData(tab, tgl_from, tgl_to) {
   const data = {};
@@ -219,6 +220,7 @@ async function buildSummaryGaji(bulan, tgl_from, tgl_to) {
     const total_potongan = toko + simpanan + cicilan + tunggakan;
     if (total_potongan > 0) {
       result.push({
+        anggota_id: a.id,
         no: a.no, nip: a.nip, nama: a.nama, dept: a.dept,
         belanja_toko: toko, simpanan_wajib: simpanan, cicilan_pinjaman: cicilan,
         tunggakan, total_potongan, gaji: a.gaji,
@@ -279,6 +281,30 @@ router.get('/limit_toko', accessRequired('laporan'), asyncHandler(async (req, re
       r.pct = limit_global ? (r.terpakai / limit_global) * 100 : 0;
     }
     return jsonOk(res, { rows, bulan, limit_global });
+  } catch (e) {
+    return jsonErr(res, e.message, 500);
+  }
+}));
+
+router.get('/pototong_gaji/all', accessRequired('laporan'), asyncHandler(async (req, res) => {
+  try {
+    const tgl_from = req.query.tgl_from || '';
+    const tgl_to = req.query.tgl_to || '';
+    const rows = await getAllPototongGajiTransactions(tgl_from, tgl_to);
+    const total = rows.reduce((s, r) => s + Number(r.nominal || 0), 0);
+    return jsonOk(res, { rows, tgl_from, tgl_to, total });
+  } catch (e) {
+    return jsonErr(res, e.message, 500);
+  }
+}));
+
+router.get('/pototong_gaji/:anggota_id', accessRequired('laporan'), asyncHandler(async (req, res) => {
+  try {
+    const anggota_id = req.params.anggota_id;
+    const tgl_from = req.query.tgl_from || '';
+    const tgl_to = req.query.tgl_to || '';
+    const transactions = await getPototongGajiTransactions(anggota_id, tgl_from, tgl_to);
+    return jsonOk(res, { ...transactions, anggota_id, tgl_from, tgl_to });
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
