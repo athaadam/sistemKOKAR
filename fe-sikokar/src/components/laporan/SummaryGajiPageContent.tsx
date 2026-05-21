@@ -36,20 +36,32 @@ export function SummaryGajiPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bulan = searchParams.get('bulan') || bulanIni();
+  const tgl_from = searchParams.get('tgl_from') || '';
+  const tgl_to = searchParams.get('tgl_to') || '';
 
   const [rows, setRows] = useState<Row[]>([]);
   const [grandTotal, setGrandTotal] = useState(0);
   const [hdr, setHdr] = useState<Hdr>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  const [filterTglFrom, setFilterTglFrom] = useState(tgl_from);
+  const [filterTglTo, setFilterTglTo] = useState(tgl_to);
+  const [showMonthFilter, setShowMonthFilter] = useState(!tgl_from && !tgl_to);
 
-  const exportPath = `/laporan/summary_gaji/export?bulan=${encodeURIComponent(bulan)}`;
+  let exportPath = `/laporan/summary_gaji/export?bulan=${encodeURIComponent(bulan)}`;
+  if (filterTglFrom && filterTglTo) {
+    exportPath = `/laporan/summary_gaji/export?tgl_from=${filterTglFrom}&tgl_to=${filterTglTo}`;
+  }
 
   const load = useCallback(() => {
     setLoading(true);
     setErr('');
+    let url = `/laporan/summary_gaji?bulan=${encodeURIComponent(bulan)}`;
+    if (filterTglFrom && filterTglTo) {
+      url = `/laporan/summary_gaji?tgl_from=${filterTglFrom}&tgl_to=${filterTglTo}`;
+    }
     api
-      .get<{ rows: Row[]; grand_total: number; hdr: Hdr }>(`/laporan/summary_gaji?bulan=${encodeURIComponent(bulan)}`)
+      .get<{ rows: Row[]; grand_total: number; hdr: Hdr }>( url)
       .then((r) => {
         setRows(r.rows || []);
         setGrandTotal(n(r.grand_total));
@@ -57,7 +69,7 @@ export function SummaryGajiPageContent() {
       })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false));
-  }, [bulan]);
+  }, [bulan, filterTglFrom, filterTglTo]);
 
   useEffect(() => {
     load();
@@ -69,27 +81,88 @@ export function SummaryGajiPageContent() {
   const logoUrl = hdr.logo ? `/${hdr.logo.replace(/^\/+/, '')}` : null;
   const sum = (key: keyof Row) => rows.reduce((s, r) => s + n(r[key]), 0);
 
+  const handleApplyFilter = () => {
+    if (filterTglFrom && filterTglTo) {
+      setShowMonthFilter(false);
+      router.push(`/laporan/summary-gaji?tgl_from=${filterTglFrom}&tgl_to=${filterTglTo}`);
+    }
+  };
+
+  const handleResetFilter = () => {
+    setFilterTglFrom('');
+    setFilterTglTo('');
+    setShowMonthFilter(true);
+    router.push(`/laporan/summary-gaji?bulan=${bulanIni()}`);
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    router.push(`/laporan/summary-gaji?bulan=${e.target.value}`);
+  };
+
   return (
     <>
       <div className="pg-hdr no-print">
         <div className="pg-hdr-left">
           <h2>📄 Summary Potongan Gaji</h2>
-          <p>Periode: <b>{bulan}</b> · {rows.length} anggota</p>
+          <p>
+            {filterTglFrom && filterTglTo
+              ? `Periode: ${filterTglFrom} s/d ${filterTglTo}`
+              : `Periode: ${bulan}`} · {rows.length} anggota
+          </p>
         </div>
         <ReportExportBar
           exportPath={exportPath}
           extra={
             <>
-              <input
-                type="month"
-                value={bulan}
-                className="form-control form-control-sm"
-                style={{ width: 160, borderRadius: 6 }}
-                onChange={(e) => router.push(`/laporan/summary-gaji?bulan=${e.target.value}`)}
-              />
-              <Link href="/laporan" className="btn btn-sm btn-outline-secondary" style={{ borderRadius: 6, fontSize: 12 }}>
-                ← Laporan
-              </Link>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="date"
+                  value={filterTglFrom}
+                  className="form-control form-control-sm"
+                  style={{ width: 140, borderRadius: 6 }}
+                  onChange={(e) => setFilterTglFrom(e.target.value)}
+                  title="Dari tanggal"
+                />
+                <span style={{ fontSize: 12, color: '#666' }}>s/d</span>
+                <input
+                  type="date"
+                  value={filterTglTo}
+                  className="form-control form-control-sm"
+                  style={{ width: 140, borderRadius: 6 }}
+                  onChange={(e) => setFilterTglTo(e.target.value)}
+                  title="Sampai tanggal"
+                />
+                <button
+                  className="btn btn-sm btn-primary"
+                  onClick={handleApplyFilter}
+                  style={{ borderRadius: 6, fontSize: 12, whiteSpace: 'nowrap' }}
+                  disabled={!filterTglFrom || !filterTglTo}
+                >
+                  Terapkan
+                </button>
+                {(filterTglFrom || filterTglTo) && (
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={handleResetFilter}
+                    style={{ borderRadius: 6, fontSize: 12, whiteSpace: 'nowrap' }}
+                  >
+                    Reset
+                  </button>
+                )}
+                {showMonthFilter && (
+                  <input
+                    type="month"
+                    value={bulan}
+                    className="form-control form-control-sm"
+                    style={{ width: 160, borderRadius: 6 }}
+                    onChange={handleMonthChange}
+                    title="Pilih berdasarkan bulan"
+                  />
+                )}
+                <Link href="/laporan" className="btn btn-sm btn-outline-secondary" style={{ borderRadius: 6, fontSize: 12 }}>
+                  ← Laporan
+                </Link>
+              </div>
             </>
           }
         />

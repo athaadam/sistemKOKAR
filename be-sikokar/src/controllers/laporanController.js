@@ -188,22 +188,29 @@ router.get('/export', accessRequired('laporan'), asyncHandler(async (req, res) =
   }
 }));
 
-async function buildSummaryGaji(bulan) {
-  const tgl_from = `${bulan}-01`;
-  const tgl_to = `${bulan}-31`;
+async function buildSummaryGaji(bulan, tgl_from, tgl_to) {
   const rows = await Q("SELECT * FROM anggota WHERE status='aktif' ORDER BY no");
   const result = [];
   for (const a of rows) {
-    const bel = await Q(
-      "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND jenis='kredit' AND tgl>=? AND tgl<=?",
-      [a.id, tgl_from, tgl_to],
-      true,
-    );
-    const pin = await Q(
-      "SELECT COALESCE(SUM(angsuran),0) as ang, COALESCE(SUM(sisa_pokok),0) as sisa FROM pinjaman WHERE anggota_id=? AND status='aktif'",
-      [a.id],
-      true,
-    );
+    let belSql = "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND jenis='kredit'";
+    const belParams = [a.id];
+    if (tgl_from && tgl_to) {
+      belSql += " AND tgl>=? AND tgl<=?";
+      belParams.push(tgl_from, tgl_to);
+    } else if (bulan) {
+      belSql += " AND tgl>=? AND tgl<=?";
+      belParams.push(`${bulan}-01`, `${bulan}-31`);
+    }
+    const bel = await Q(belSql, belParams, true);
+
+    let pinSql = "SELECT COALESCE(SUM(angsuran),0) as ang FROM pinjaman WHERE anggota_id=? AND status='aktif'";
+    const pinParams = [a.id];
+    if (tgl_from && tgl_to) {
+      pinSql += " AND tgl_cair>=? AND tgl_cair<=?";
+      pinParams.push(tgl_from, tgl_to);
+    }
+    const pin = await Q(pinSql, pinParams, true);
+
     const piu = await Q('SELECT COALESCE(saldo,0) as t FROM piutang WHERE anggota_id=?', [a.id], true);
     const toko = bel?.t ?? 0;
     const simpanan = a.gaji ? a.gaji * 0.02 : 0;
@@ -225,9 +232,11 @@ async function buildSummaryGaji(bulan) {
 router.get('/summary_gaji', accessRequired('laporan'), asyncHandler(async (req, res) => {
   try {
     const bulan = req.query.bulan || today().slice(0, 7);
-    const { result, grand_total } = await buildSummaryGaji(bulan);
+    const tgl_from = req.query.tgl_from || '';
+    const tgl_to = req.query.tgl_to || '';
+    const { result, grand_total } = await buildSummaryGaji(bulan, tgl_from, tgl_to);
     const hdr = await getPrintHeader();
-    return jsonOk(res, { rows: result, bulan, grand_total, hdr });
+    return jsonOk(res, { rows: result, bulan, tgl_from, tgl_to, grand_total, hdr });
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
@@ -236,15 +245,19 @@ router.get('/summary_gaji', accessRequired('laporan'), asyncHandler(async (req, 
 router.get('/summary_gaji/export', accessRequired('laporan'), asyncHandler(async (req, res) => {
   try {
     const bulan = req.query.bulan || today().slice(0, 7);
+    const tgl_from = req.query.tgl_from || '';
+    const tgl_to = req.query.tgl_to || '';
     const fmt = req.query.fmt || 'xlsx';
-    const { result } = await buildSummaryGaji(bulan);
+    const { result } = await buildSummaryGaji(bulan, tgl_from, tgl_to);
     const exportRows = result.map((r, i) => ({
       urut: i + 1, no: r.no, nip: r.nip, nama: r.nama, dept: r.dept,
       belanja_toko: r.belanja_toko, simpanan_wajib: r.simpanan_wajib, cicilan_pinjaman: r.cicilan_pinjaman,
       tunggakan: r.tunggakan, total_potongan: r.total_potongan,
     }));
     const cols = ['urut', 'no', 'nip', 'nama', 'dept', 'belanja_toko', 'simpanan_wajib', 'cicilan_pinjaman', 'tunggakan', 'total_potongan'];
-    return sendExport(fmt, exportRows, cols, `Summary Potongan Gaji ${bulan}`, `summary_gaji_${bulan}.xlsx`, res);
+    const filename = tgl_from && tgl_to ? `summary_gaji_${tgl_from}_to_${tgl_to}.xlsx` : `summary_gaji_${bulan}.xlsx`;
+    const title = tgl_from && tgl_to ? `Summary Potongan Gaji ${tgl_from} s/d ${tgl_to}` : `Summary Potongan Gaji ${bulan}`;
+    return sendExport(fmt, exportRows, cols, title, filename, res);
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
