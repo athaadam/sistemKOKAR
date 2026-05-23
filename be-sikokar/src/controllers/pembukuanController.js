@@ -6,6 +6,12 @@ const { accessRequired } = require('../middleware/auth');
 const { getSetting } = require('../utils/settings');
 const { sendExport } = require('../utils/export');
 const { audit } = require('../utils/audit');
+const {
+  SHU_ALOKASI,
+  getShuPercentages,
+  hitungSHU,
+  closePeriod: closeShuPeriod,
+} = require('../services/koperasiService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 16 * 1024 * 1024 } });
 
@@ -20,23 +26,6 @@ const LABA_RUGI_DEFAULT = {
   pend_rental: 0, pend_labor: 0, biaya_labor: 0, laba_labor: 0, pend_kwitansi: 0, pend_lain: 0,
   total_pendapatan: 0, beban_gaji: 0, beban_ops: 0, beban_lain: 0, total_beban: 0, shu_bruto: 0,
 };
-
-const SHU_KEYS = [
-  ['cadangan', 'Dana Cadangan', 'shu_cadangan_pct', 8],
-  ['simpanan_anggota', 'Dana Simpanan Anggota', 'shu_simpanan_anggota_pct', 25],
-  ['bunga_pinjaman', 'Dana Kontribusi Bunga Pinjaman', 'shu_bunga_pinjaman_pct', 20],
-  ['konsumsi', 'Dana Kontribusi Konsumsi', 'shu_konsumsi_pct', 15],
-  ['parcel', 'Dana Parcel', 'shu_parcel_pct', 15],
-  ['pengurus', 'Dana Pengurus', 'shu_pengurus_pct', 12],
-  ['kesejahteraan', 'Dana Kesejahteraan', 'shu_kesejahteraan_pct', 1],
-  ['pendidikan', 'Dana Pendidikan', 'shu_pendidikan_pct', 1],
-  ['pembangunan', 'Dana Pembangunan Daerah Kerja', 'shu_pembangunan_pct', 1],
-  ['sosial', 'Dana Sosial', 'shu_sosial_pct', 2],
-];
-
-async function spc(key, defaultVal) {
-  return Number(await getSetting(key, String(defaultVal))) || defaultVal;
-}
 
 async function buildFinancials(tahun) {
   const tgl_akhir = `${tahun}-12-31`;
@@ -131,45 +120,7 @@ async function buildFinancials(tahun) {
     total_beban, shu_bruto,
   };
 
-  const shu = { bruto: shu_bruto, alokasi: [] };
-  let total_pct = 0;
-  let check = 0;
-  for (const [code, label, key, defaultPct] of SHU_KEYS) {
-    const pct = await spc(key, defaultPct);
-    const jml = Math.round(shu_bruto * pct / 100);
-    total_pct += pct;
-    check += jml;
-    shu[code] = jml;
-    shu[`${code}_pct`] = pct;
-    shu.alokasi.push({ code, label, key, pct, jumlah: jml });
-  }
-  shu.check = check;
-  shu.total_pct = total_pct;
-
-  const total_modal = (await Q('SELECT COALESCE(SUM(saldo),0) as t FROM simpanan', [], true))?.t ?? 0;
-  const total_pin = (await Q(
-    "SELECT COALESCE(SUM(COALESCE(disetujui,nominal)),0) as t FROM pinjaman WHERE substr(COALESCE(tgl_cair,tgl_pengajuan,''),1,4)=?",
-    [tahun], true,
-  ))?.t ?? 0;
-  const total_konsumsi = (await Q(
-    "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE substr(tgl,1,4)=? AND (jenis IN ('kredit','potong_gaji') OR payment_channel IN ('kredit','potong_gaji'))",
-    [tahun], true,
-  ))?.t ?? 0;
-  shu.kontribusi_total = { modal: total_modal, pinjaman: total_pin, konsumsi: total_konsumsi };
-  shu.kontribusi = await Q(
-    `SELECT a.no,a.nama,
-      COALESCE((SELECT SUM(saldo) FROM simpanan s WHERE s.anggota_id=a.id),0) as modal,
-      COALESCE((SELECT SUM(COALESCE(disetujui,nominal)) FROM pinjaman p WHERE p.anggota_id=a.id AND substr(COALESCE(p.tgl_cair,p.tgl_pengajuan,''),1,4)=?),0) as pinjaman,
-      COALESCE((SELECT SUM(total) FROM penjualan pj WHERE pj.anggota_id=a.id AND substr(pj.tgl,1,4)=? AND (pj.jenis IN ('kredit','potong_gaji') OR pj.payment_channel IN ('kredit','potong_gaji'))),0) as konsumsi
-      FROM anggota a WHERE a.status='aktif' ORDER BY a.nama`,
-    [tahun, tahun],
-  );
-  for (const r of shu.kontribusi) {
-    r.shu_modal = total_modal ? Math.round((r.modal / total_modal) * (shu.simpanan_anggota || 0)) : 0;
-    r.shu_pinjaman = total_pin ? Math.round((r.pinjaman / total_pin) * (shu.bunga_pinjaman || 0)) : 0;
-    r.shu_konsumsi = total_konsumsi ? Math.round((r.konsumsi / total_konsumsi) * (shu.konsumsi || 0)) : 0;
-    r.shu_total = r.shu_modal + r.shu_pinjaman + r.shu_konsumsi;
-  }
+  const shu = await hitungSHU(tahun);
 
   return { neraca, laba_rugi, shu };
 }
@@ -226,17 +177,25 @@ router.post('/jurnal/save', accessRequired('pembukuan'), asyncHandler(async (req
     const f = req.body;
     const jid = String(f.id || '').trim();
     const nominal = Number(f.nominal) || 0;
+    const tgl = f.tgl || today();
+    const periode = String(tgl).slice(0, 7);
     if (jid) {
+      const existing = await Q('SELECT id,tgl FROM jurnal WHERE id=?', [jid], true);
+      if (!existing) return jsonErr(res, 'Jurnal tidak ditemukan', 404);
+      const locked = await Q('SELECT id FROM close_period WHERE periode=?', [String(existing.tgl || '').slice(0, 7)], true);
+      if (locked) return jsonErr(res, `Periode ${String(existing.tgl).slice(0, 7)} sudah ditutup — jurnal tidak bisa diubah`);
       await X(
         'UPDATE jurnal SET tgl=?,modul=?,ket=?,debit=?,kredit=?,nominal=? WHERE id=?',
-        [f.tgl, f.modul, f.ket, f.debit, f.kredit, nominal, jid],
+        [tgl, f.modul, f.ket, f.debit, f.kredit, nominal, jid],
       );
       return jsonOk(res, {}, 'Jurnal diperbarui');
     }
+    const locked = await Q('SELECT id FROM close_period WHERE periode=?', [periode], true);
+    if (locked) return jsonErr(res, `Periode ${periode} sudah ditutup — jurnal tidak bisa ditambah`);
     const no = `JRN-${today().replace(/-/g, '')}-${uid().slice(0, 4)}`;
     await X(
       'INSERT INTO jurnal (id,no,tgl,modul,ref,ket,debit,kredit,nominal,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-      [uid(), no, f.tgl || today(), f.modul || 'Manual', no, f.ket, f.debit, f.kredit, nominal, req.user.id],
+      [uid(), no, tgl, f.modul || 'Manual', no, f.ket, f.debit, f.kredit, nominal, req.user.id],
     );
     return jsonOk(res, { no }, 'Jurnal ditambahkan');
   } catch (e) {
@@ -246,6 +205,10 @@ router.post('/jurnal/save', accessRequired('pembukuan'), asyncHandler(async (req
 
 router.delete('/jurnal/delete/:jid', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
   try {
+    const j = await Q('SELECT tgl FROM jurnal WHERE id=?', [req.params.jid], true);
+    if (!j) return jsonErr(res, 'Jurnal tidak ditemukan', 404);
+    const locked = await Q('SELECT id FROM close_period WHERE periode=?', [String(j.tgl || '').slice(0, 7)], true);
+    if (locked) return jsonErr(res, `Periode ${String(j.tgl).slice(0, 7)} sudah ditutup — jurnal tidak bisa dihapus`);
     await X('DELETE FROM jurnal WHERE id=?', [req.params.jid]);
     return jsonOk(res, {}, 'Jurnal dihapus');
   } catch (e) {
@@ -339,16 +302,8 @@ router.get('/export/laba_rugi', accessRequired('pembukuan'), asyncHandler(async 
 router.get('/export/shu', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
   try {
     const tahun = req.query.tahun || today().slice(0, 4);
-    const pend_toko = (await Q("SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE status='lunas' AND substr(tgl,1,4)=?", [tahun], true))?.t ?? 0;
-    const hpp = (await Q('SELECT COALESCE(SUM(total),0) as t FROM pembelian WHERE substr(tgl,1,4)=?', [tahun], true))?.t ?? 0;
-    const pend_lain = (await Q("SELECT COALESCE(SUM(nominal),0) as t FROM jurnal WHERE kredit LIKE 'Pendapatan%' AND substr(tgl,1,4)=?", [tahun], true))?.t ?? 0;
-    const beban = (await Q("SELECT COALESCE(SUM(nominal),0) as t FROM jurnal WHERE debit LIKE 'Beban%' AND substr(tgl,1,4)=?", [tahun], true))?.t ?? 0;
-    const bruto = pend_toko - hpp + pend_lain - beban;
-    const rows = [];
-    for (const [, label, key, defaultPct] of SHU_KEYS) {
-      const pct = await spc(key, defaultPct);
-      rows.push({ pos: label, pct, jumlah: Math.round(bruto * pct / 100) });
-    }
+    const shu = await hitungSHU(tahun);
+    const rows = (shu.alokasi || []).map((item) => ({ pos: item.label, pct: item.pct, jumlah: item.jumlah }));
     return sendExport('xlsx', rows, ['pos', 'pct', 'jumlah'], `SHU ${tahun}`, `shu_${tahun}.xlsx`, res);
   } catch (e) {
     return jsonErr(res, e.message, 500);
@@ -389,18 +344,32 @@ router.post('/import/jurnal', accessRequired('pembukuan'), upload.single('file')
 
 router.post('/shu/save', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
   try {
-    const keys = SHU_KEYS.map(([, , k]) => k);
     let total = 0;
-    for (const k of keys) {
-      total += Number(req.body[k]) || 0;
+    for (const item of SHU_ALOKASI) {
+      total += Number(req.body[item.key]) || 0;
     }
     if (Math.abs(total - 100) > 0.01) {
       return jsonErr(res, `Total persentase harus 100% (sekarang ${total.toFixed(1)}%)`);
     }
-    for (const k of keys) {
-      await upsertSetting(k, String(req.body[k] ?? '0'));
+    for (const item of SHU_ALOKASI) {
+      await upsertSetting(item.key, String(req.body[item.key] ?? '0'));
     }
     return jsonOk(res, {}, 'Pengaturan pembagian SHU disimpan');
+  } catch (e) {
+    return jsonErr(res, e.message, 500);
+  }
+}));
+
+router.post('/shu/finalize', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
+  try {
+    const periode = req.body.periode || today().slice(0, 4);
+    const result = await closeShuPeriod({
+      periode,
+      userId: req.user.id,
+      userName: req.user.name || '-',
+      catatan: req.body.catatan || '',
+    });
+    return jsonOk(res, result, `SHU periode ${periode} sudah difinalisasi`);
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
@@ -507,6 +476,7 @@ router.get('/arus_kas', accessRequired('pembukuan'), asyncHandler(async (req, re
 router.get('/calk', accessRequired('pembukuan'), asyncHandler(async (req, res) => {
   try {
     const tahun = req.query.tahun || today().slice(0, 4);
+    const persentaseShu = await getShuPercentages();
     const info = {
       nama_koperasi: await getSetting('nama_kop', 'Koperasi KOKARSI'),
       alamat: await getSetting('alamat', ''),
@@ -515,18 +485,7 @@ router.get('/calk', accessRequired('pembukuan'), asyncHandler(async (req, res) =
       jml_anggota_keluar: (await Q("SELECT COUNT(*) as c FROM anggota WHERE status_detail IN ('keluar','pensiun','meninggal')", [], true))?.c ?? 0,
       total_simpanan: (await Q('SELECT COALESCE(SUM(saldo),0) as t FROM simpanan', [], true))?.t ?? 0,
       total_pinjaman_aktif: (await Q("SELECT COALESCE(SUM(sisa_pokok),0) as t FROM pinjaman WHERE status='aktif'", [], true))?.t ?? 0,
-      persentase_shu: {
-        cadangan: await getSetting('shu_cadangan_pct', '8'),
-        simpanan_anggota: await getSetting('shu_simpanan_anggota_pct', '25'),
-        bunga_pinjaman: await getSetting('shu_bunga_pinjaman_pct', '20'),
-        konsumsi: await getSetting('shu_konsumsi_pct', '15'),
-        parcel: await getSetting('shu_parcel_pct', '15'),
-        pengurus: await getSetting('shu_pengurus_pct', '12'),
-        kesejahteraan: await getSetting('shu_kesejahteraan_pct', '1'),
-        pendidikan: await getSetting('shu_pendidikan_pct', '1'),
-        pembangunan: await getSetting('shu_pembangunan_pct', '1'),
-        sosial: await getSetting('shu_sosial_pct', '2'),
-      },
+      persentase_shu: persentaseShu,
       bunga_pinjaman_regular: await getSetting('bunga_regular', '1.5'),
       bunga_pinjaman_darurat: await getSetting('bunga_darurat', '1'),
       bunga_jasa_simpanan: await getSetting('bunga_jasa_simpanan_pct', '3'),

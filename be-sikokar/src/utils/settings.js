@@ -41,6 +41,25 @@ async function getLimitKreditToko() {
   return Number(await getSetting('limit_kredit_toko_bulanan', '3500000'));
 }
 
+async function getJasaSimpananRate() {
+  return Number(await getSetting('bunga_jasa_simpanan_pct', '3'));
+}
+
+async function getShuPercentages() {
+  return {
+    cadangan: Number(await getSetting('shu_cadangan_pct', '8')),
+    simpanan_anggota: Number(await getSetting('shu_simpanan_anggota_pct', '25')),
+    bunga_pinjaman: Number(await getSetting('shu_bunga_pinjaman_pct', '20')),
+    konsumsi: Number(await getSetting('shu_konsumsi_pct', '15')),
+    parcel: Number(await getSetting('shu_parcel_pct', '15')),
+    pengurus: Number(await getSetting('shu_pengurus_pct', '12')),
+    kesejahteraan: Number(await getSetting('shu_kesejahteraan_pct', '1')),
+    pendidikan: Number(await getSetting('shu_pendidikan_pct', '1')),
+    pembangunan: Number(await getSetting('shu_pembangunan_pct', '1')),
+    sosial: Number(await getSetting('shu_sosial_pct', '2')),
+  };
+}
+
 async function getOrCreateLimitToko(anggotaId, bulan) {
   let rec = await Q(
     'SELECT * FROM limit_kredit_toko WHERE anggota_id=? AND bulan=?',
@@ -96,6 +115,8 @@ module.exports = {
   getDarPerAjuan,
   getDarMaxAktif,
   getLimitKreditToko,
+  getJasaSimpananRate,
+  getShuPercentages,
   getOrCreateLimitToko,
   getPrintHeader,
 };

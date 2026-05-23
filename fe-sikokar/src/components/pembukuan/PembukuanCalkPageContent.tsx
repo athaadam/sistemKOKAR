@@ -116,7 +116,7 @@ export function PembukuanCalkPageContent() {
             <p>Laporan keuangan disusun berdasarkan SAK ETAP untuk koperasi. Mata uang: Rupiah (Rp).</p>
             <h5 style={{ color: '#1D4ED8', marginTop: 20 }}>4. SIMPANAN ANGGOTA</h5>
             <p>
-              Total simpanan: <b>Rp {fmtRp(info.total_simpanan)}</b>. Bunga jasa simpanan: <b>{info.bunga_jasa_simpanan}%</b> per tahun.
+              Total simpanan: <b>Rp {fmtRp(info.total_simpanan)}</b>. Hasil jasa simpanan: <b>{info.bunga_jasa_simpanan}%</b> per tahun.
             </p>
             <h5 style={{ color: '#1D4ED8', marginTop: 20 }}>5. PINJAMAN</h5>
             <p>

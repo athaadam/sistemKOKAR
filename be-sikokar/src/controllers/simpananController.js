@@ -6,6 +6,11 @@ const { accessRequired } = require('../middleware/auth');
 const { getSetting } = require('../utils/settings');
 const { sendExport } = require('../utils/export');
 const { audit } = require('../utils/audit');
+const {
+  assertPeriodOpen,
+  hitungJasaSimpanan,
+  simpanDistribusiJasaSimpanan,
+} = require('../services/koperasiService');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 16 * 1024 * 1024 } });
 
@@ -63,6 +68,8 @@ router.post('/save', accessRequired('simpanan'), asyncHandler(async (req, res) =
     let ket = f.ket || '';
 
     if (!anggota_id || !nominal) return jsonErr(res, 'Isi semua field');
+
+    await assertPeriodOpen(String(tgl).slice(0, 7));
 
     if (tipe === 'tarik') {
       const cur = await Q('SELECT saldo FROM simpanan WHERE anggota_id=? AND jenis=?', [anggota_id, jenis], true);
@@ -208,12 +215,16 @@ router.post('/setor_massal/proses', accessRequired('simpanan'), asyncHandler(asy
 router.get('/jasa', accessRequired('simpanan'), asyncHandler(async (req, res) => {
   try {
     const rate = Number(await getSetting('bunga_jasa_simpanan_pct', '3'));
+    const periode = req.query.periode || today().slice(0, 4);
     const history = await Q(
       `SELECT j.*, a.nama as anggota_nama, a.no as anggota_no
        FROM simpanan_jasa j LEFT JOIN anggota a ON j.anggota_id=a.id
-       ORDER BY j.periode DESC, j.created_at DESC LIMIT 200`,
+       WHERE j.periode=?
+       ORDER BY j.created_at DESC LIMIT 200`,
+      [periode],
     );
-    return jsonOk(res, { history, rate });
+    const preview = await hitungJasaSimpanan(periode, rate);
+    return jsonOk(res, { history, rate, periode, preview });
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
@@ -223,33 +234,14 @@ router.post('/jasa', accessRequired('simpanan'), asyncHandler(async (req, res) =
   try {
     const periode = req.body.periode || today().slice(0, 4);
     let rate = Number(req.body.rate_pct) || Number(await getSetting('bunga_jasa_simpanan_pct', '3'));
-    const anggota_list = await Q("SELECT id,no,nama FROM anggota WHERE status='aktif'");
-    let ok = 0;
-    for (const a of anggota_list) {
-      const saldoRow = await Q(
-        "SELECT COALESCE(SUM(saldo),0) as t FROM simpanan WHERE anggota_id=? AND jenis='sukarela'",
-        [a.id],
-        true,
-      );
-      const saldo = saldoRow?.t ?? 0;
-      if (saldo <= 0) continue;
-      const jasa = Math.round(saldo * rate / 100);
-      const no = `JSS-${periode}-${a.no}`;
-      const existing = await Q('SELECT id FROM simpanan_jasa WHERE no=?', [no], true);
-      if (existing) continue;
-      await X(
-        'INSERT INTO simpanan_jasa (id,no,periode,anggota_id,saldo_rata,rate_pct,jasa,tgl,user_id) VALUES (?,?,?,?,?,?,?,?,?)',
-        [uid(), no, periode, a.id, saldo, rate, jasa, today(), req.user.id],
-      );
-      await X("UPDATE simpanan SET saldo=saldo+? WHERE anggota_id=? AND jenis='sukarela'", [jasa, a.id]);
-      await X(
-        'INSERT INTO simpanan_trx (id,no,tgl,anggota_id,jenis,tipe,nominal,metode,ket,user_id) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [uid(), no, today(), a.id, 'sukarela', 'setor', jasa, 'jasa-simpanan', `Bunga jasa simpanan ${periode} (${rate}%)`, req.user.id],
-      );
-      ok++;
-    }
-    await audit('simpanan', 'jasa_distribute', 'simpanan_jasa', '', null, { periode, rate, count: ok }, `Distribusi jasa ${periode}`);
-    return jsonOk(res, { count: ok }, `Berhasil distribusi jasa simpanan ke ${ok} anggota`);
+    const hasil = await simpanDistribusiJasaSimpanan({
+      periode,
+      ratePct: rate,
+      userId: req.user.id,
+      userName: req.user.name || '-',
+    });
+    await audit('simpanan', 'jasa_distribute', 'simpanan_jasa', '', null, { periode, rate, count: hasil.rows.length }, `Distribusi jasa simpanan ${periode}`);
+    return jsonOk(res, { count: hasil.rows.length, total_jasa: hasil.total_jasa }, `Berhasil distribusi jasa simpanan ke ${hasil.rows.length} anggota`);
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }

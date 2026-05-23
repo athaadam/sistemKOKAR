@@ -66,7 +66,7 @@ export const MENU_TREE: { section: string; items: MenuItem[] }[] = [
     items: [
       { id: 'simpanan', icon: ICON_MAP.simpanan_custom, label: 'Simpanan' },
       { id: 'simpanan_massal', icon: ICON_MAP.setorMassal_custom, label: 'Setor Massal' },
-      { id: 'simpanan_jasa', icon: ICON_MAP.jasaSimpanan_custom, label: 'Jasa Simpanan' },
+      { id: 'simpanan_jasa', icon: ICON_MAP.jasaSimpanan_custom, label: 'Hasil Jasa Simpanan' },
       { id: 'pinjaman', icon: ICON_MAP.pinjaman_custom, label: 'Pinjaman' },
       { id: 'kredit', icon: ICON_MAP.pinjaman_custom, label: 'Kredit Motor & Elektronik' },
       { id: 'ppob', icon: ICON_MAP.ppob_custom, label: 'PPOB' },

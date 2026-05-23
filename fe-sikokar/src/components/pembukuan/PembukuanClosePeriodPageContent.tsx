@@ -68,8 +68,8 @@ export function PembukuanClosePeriodPageContent() {
       </div>
       <div className="pg-hdr">
         <div className="pg-hdr-left">
-          <h2>🔐 Tutup Buku</h2>
-          <p>Periode tertutup tidak dapat diedit</p>
+            <h2>🔐 Tutup Buku</h2>
+            <p>Periode tertutup mengunci jurnal dan transaksi yang memengaruhi SHU.</p>
         </div>
       </div>
       <div className="card mb-3" style={{ borderRadius: 8 }}>
@@ -85,7 +85,7 @@ export function PembukuanClosePeriodPageContent() {
             </div>
             <div className="col-md-3">
               <button type="submit" className="btn btn-sm btn-danger w-100" disabled={saving}>
-                {saving ? 'Menutup...' : 'Tutup Periode'}
+                  {saving ? 'Menyimpan...' : 'Tutup Periode & Kunci SHU'}
               </button>
             </div>
           </form>

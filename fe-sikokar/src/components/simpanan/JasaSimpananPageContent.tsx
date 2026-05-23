@@ -52,7 +52,7 @@ export function JasaSimpananPageContent() {
     const ratePct = Number(rateInput) || rate;
     if (
       !confirm(
-        'Distribusikan jasa simpanan ke semua anggota aktif?\n\nJasa = total simpanan sukarela × rate%. Hasil otomatis ditambahkan ke saldo sukarela.',
+        'Distribusikan hasil jasa simpanan ke semua anggota aktif?\n\nHasil ini dicatat sebagai transaksi simpanan sukarela, bukan SHU.',
       )
     ) {
       return;
@@ -63,11 +63,11 @@ export function JasaSimpananPageContent() {
         periode,
         rate_pct: ratePct,
       });
-      setFlash(r.message || 'Distribusi jasa simpanan berhasil');
+      setFlash(r.message || 'Hasil jasa simpanan berhasil dibukukan');
       setFlashType('success');
       load();
     } catch (ex) {
-      setFlash(ex instanceof Error ? ex.message : 'Gagal distribusi jasa');
+          setFlash(ex instanceof Error ? ex.message : 'Gagal membukukan hasil jasa');
       setFlashType('danger');
     } finally {
       setSaving(false);
@@ -91,17 +91,17 @@ export function JasaSimpananPageContent() {
         <div className="pg-hdr-left">
           <h2 style={{ display: 'flex', alignItems: 'center' }}>
             <IconRenderer icon={ICON_MAP.jasaSimpanan_custom} size={24} style={{ marginRight: 8 }} />
-            Jasa Simpanan
+            Hasil Jasa Simpanan
           </h2>
           <p>
-            Distribusi bunga jasa simpanan ke anggota — Rate default: <b>{rate}%/tahun</b>
+            Hasil atas simpanan sukarela anggota, dicatat sebagai transaksi simpanan dan terpisah dari SHU. Rate default: <b>{rate}%/tahun</b>
           </p>
         </div>
       </div>
 
       <div className="card mb-3" style={{ borderRadius: 8 }}>
         <div className="card-header" style={{ background: '#0F2744', color: '#fff', fontWeight: 700 }}>
-          Distribusi Jasa Simpanan
+          Pembukuan Hasil Jasa Simpanan
         </div>
         <div className="card-body">
           <form className="row g-2 align-items-end" onSubmit={onDistribusi}>
@@ -117,7 +117,7 @@ export function JasaSimpananPageContent() {
               />
             </div>
             <div className="col-md-3">
-              <label className="fl">Rate (%)</label>
+              <label className="fl">Rate hasil (%)</label>
               <input
                 type="number"
                 step={0.1}
@@ -129,17 +129,17 @@ export function JasaSimpananPageContent() {
             </div>
             <div className="col-md-3">
               <button type="submit" className="btn btn-sm btn-navy w-100" disabled={saving}>
-                {saving ? 'Memproses...' : 'Distribusikan'}
+                {saving ? 'Memproses...' : 'Buku Hasil'}
               </button>
             </div>
           </form>
           <div style={{ fontSize: 11, color: '#64748B', marginTop: 8 }}>
-            Jasa = total simpanan sukarela × rate%. Hasil otomatis ditambahkan ke saldo sukarela.
+            Jasa dihitung dari saldo simpanan sukarela × rate%. Hasil dibukukan sebagai transaksi simpanan, bukan SHU.
           </div>
         </div>
       </div>
 
-      <h6>Riwayat Distribusi</h6>
+      <h6>Riwayat Hasil Jasa Simpanan</h6>
       <div className="tbl-wrap">
         <table className="table table-sm mb-0" style={{ fontSize: 11 }}>
           <thead>

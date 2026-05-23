@@ -8,6 +8,14 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function monthPeriod(value = today()) {
+  return String(value || '').slice(0, 7);
+}
+
+function yearPeriod(value = today()) {
+  return String(value || '').slice(0, 4);
+}
+
 function nowStr() {
   const d = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -83,6 +91,8 @@ function jsonErr(res, message = 'Error', status = 400) {
 module.exports = {
   uid,
   today,
+  monthPeriod,
+  yearPeriod,
   nowStr,
   fmtRp,
   terbilang,

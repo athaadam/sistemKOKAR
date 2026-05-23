@@ -45,6 +45,9 @@ type ShuData = {
   alokasi: ShuAlokasi[];
   check: number;
   total_pct: number;
+  finalized?: boolean;
+  closed_at?: string;
+  catatan?: string;
   kontribusi?: ShuKontribusi[];
   [key: string]: unknown;
 };
@@ -59,16 +62,16 @@ const TABS: { id: TabId; label: string; icon: IconConfig }[] = [
 ];
 
 const SHU_FORM = [
-  { key: 'shu_cadangan_pct', label: 'Dana Cadangan', def: 8 },
-  { key: 'shu_simpanan_anggota_pct', label: 'Dana Simpanan Anggota', def: 25 },
-  { key: 'shu_bunga_pinjaman_pct', label: 'Kontribusi Bunga Pinjaman', def: 20 },
-  { key: 'shu_konsumsi_pct', label: 'Kontribusi Konsumsi', def: 15 },
-  { key: 'shu_parcel_pct', label: 'Dana Parcel', def: 15 },
-  { key: 'shu_pengurus_pct', label: 'Dana Pengurus', def: 12 },
-  { key: 'shu_kesejahteraan_pct', label: 'Dana Kesejahteraan', def: 1 },
-  { key: 'shu_pendidikan_pct', label: 'Dana Pendidikan', def: 1 },
-  { key: 'shu_pembangunan_pct', label: 'Pembangunan Daerah Kerja', def: 1 },
-  { key: 'shu_sosial_pct', label: 'Dana Sosial', def: 2 },
+  { key: 'shu_cadangan_pct', label: 'Cadangan', def: 8 },
+  { key: 'shu_simpanan_anggota_pct', label: 'Simpanan Anggota', def: 25 },
+  { key: 'shu_bunga_pinjaman_pct', label: 'Bunga Pinjaman', def: 20 },
+  { key: 'shu_konsumsi_pct', label: 'Konsumsi', def: 15 },
+  { key: 'shu_parcel_pct', label: 'Parcel', def: 15 },
+  { key: 'shu_pengurus_pct', label: 'Pengurus', def: 12 },
+  { key: 'shu_kesejahteraan_pct', label: 'Kesejahteraan', def: 1 },
+  { key: 'shu_pendidikan_pct', label: 'Pendidikan', def: 1 },
+  { key: 'shu_pembangunan_pct', label: 'Pembangunan', def: 1 },
+  { key: 'shu_sosial_pct', label: 'Sosial', def: 2 },
 ];
 
 const btnStyle = { borderRadius: 6, fontSize: 12 };
@@ -266,6 +269,22 @@ export function PembukuanPageContent() {
     }
   }
 
+  async function onShuFinalize() {
+    if (!confirm('Finalisasi SHU periode ini? Setelah difinalisasi, angka SHU disimpan sebagai hasil akhir.')) return;
+    setSaving(true);
+    try {
+      const r = await api.post<{ message?: string }>('/pembukuan/shu/finalize', { periode: tahun });
+      setFlash(r.message || 'SHU difinalisasi');
+      setFlashType('success');
+      load();
+    } catch (ex) {
+      setFlash(ex instanceof Error ? ex.message : 'Gagal finalisasi SHU');
+      setFlashType('danger');
+    } finally {
+      setSaving(false);
+    }
+  }
+
   if (loading && !jurnalRows.length && tab === 'jurnal' && !err) {
     return (
       <div className="text-center py-5">
@@ -285,7 +304,7 @@ export function PembukuanPageContent() {
             <IconRenderer icon={ICON_MAP.pembukuan_custom} size={24} style={{ marginRight: 8 }} />
             Pembukuan Koperasi
           </h2>
-          <p>Jurnal · Neraca · Laba Rugi · SHU</p>
+          <p>Jurnal · Neraca · Laba Rugi · SHU final</p>
         </div>
         <div className="pg-hdr-right no-print">
           <a href={api.exportUrl('/pembukuan/export/jurnal?fmt=xlsx')} className="btn btn-sm btn-outline-success" style={btnStyle} target="_blank" rel="noreferrer">
@@ -363,9 +382,14 @@ export function PembukuanPageContent() {
             </a>
           )}
           {tab === 'shu' && (
-            <a href={api.exportUrl(`/pembukuan/export/shu?tahun=${tahun}`)} className="btn btn-sm btn-outline-success" target="_blank" rel="noreferrer">
-              Export SHU
-            </a>
+            <>
+              <button type="button" className="btn btn-sm btn-outline-primary" style={btnStyle} onClick={onShuFinalize} disabled={saving}>
+                {shu.finalized ? 'Perbarui SHU Final' : 'Finalisasi SHU'}
+              </button>
+              <a href={api.exportUrl(`/pembukuan/export/shu?tahun=${tahun}`)} className="btn btn-sm btn-outline-success" target="_blank" rel="noreferrer">
+                Export SHU
+              </a>
+            </>
           )}
         </form>
       )}
@@ -718,12 +742,15 @@ export function PembukuanPageContent() {
 
       {tab === 'shu' && (
         <>
-          <h5 style={{ fontSize: 14, fontWeight: 700, color: '#0F2744' }}>PEMBAGIAN SHU — Tahun {tahun}</h5>
-          <p style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>Berdasarkan AD/ART Koperasi</p>
+          <h5 style={{ fontSize: 14, fontWeight: 700, color: '#0F2744' }}>SHU Koperasi — Tahun {tahun}</h5>
+          <p style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>
+            SHU adalah pembagian laba koperasi. Jasa simpanan dicatat terpisah sebagai transaksi simpanan.
+            {shu.finalized ? ' Periode ini sudah difinalisasi.' : ''}
+          </p>
           <div className="row g-3">
             <div className="col-md-5">
               <div className="card" style={{ borderRadius: 8, overflow: 'hidden' }}>
-                <div style={{ background: '#0F2744', color: '#fff', padding: '8px 14px', fontWeight: 700, fontSize: 13 }}>ALOKASI SHU</div>
+                <div style={{ background: '#0F2744', color: '#fff', padding: '8px 14px', fontWeight: 700, fontSize: 13 }}>ALOKASI SHU FINAL</div>
                 <table className="table table-sm mb-0" style={{ fontSize: 12 }}>
                   <thead>
                     <tr>
@@ -756,18 +783,20 @@ export function PembukuanPageContent() {
             </div>
             <div className="col-md-7">
               <div className="card" style={{ borderRadius: 8, overflow: 'hidden' }}>
-                <div style={{ background: '#16A34A', color: '#fff', padding: '8px 14px', fontWeight: 700, fontSize: 13 }}>ESTIMASI SHU per Anggota</div>
+                <div style={{ background: '#16A34A', color: '#fff', padding: '8px 14px', fontWeight: 700, fontSize: 13 }}>
+                  {shu.finalized ? 'DISTRIBUSI SHU per Anggota' : 'ESTIMASI SHU per Anggota'}
+                </div>
                 <div className="tbl-wrap p-2" style={{ maxHeight: 320, overflow: 'auto' }}>
                   <table className="table table-sm" style={{ fontSize: 10.5 }}>
                     <thead>
                       <tr>
                         <th>Anggota</th>
-                        <th className="text-end">Modal</th>
-                        <th className="text-end">SHU Modal</th>
-                        <th className="text-end">Pinjaman</th>
-                        <th className="text-end">SHU Pinj.</th>
-                        <th className="text-end">Konsumsi</th>
-                        <th className="text-end">SHU Kons.</th>
+                        <th className="text-end">Basis Simpanan</th>
+                        <th className="text-end">Bagian Simpanan</th>
+                        <th className="text-end">Basis Pinjaman</th>
+                        <th className="text-end">Bagian Pinjaman</th>
+                        <th className="text-end">Basis Konsumsi</th>
+                        <th className="text-end">Bagian Konsumsi</th>
                         <th className="text-end">Total</th>
                       </tr>
                     </thead>
