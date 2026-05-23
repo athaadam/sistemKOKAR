@@ -40,6 +40,8 @@ export function KolektifSlipPrint({ data, backHref }: { data: SlipData; backHref
   const hdr = data.hdr || {};
   const reg = data.pinjaman_regular?.[0];
   const dar = data.pinjaman_darurat || [];
+  const totalToko = Number(data.total_toko) || 0;
+  const totalKredit = Number(data.kredit?.motor || 0) + Number(data.kredit?.elektronik || 0);
   const simRows = data.simpanan_rows || [
     { label: 'SIM POKOK', jumlah: 0 },
     { label: 'SIM WAJIB', jumlah: 0 },
@@ -96,7 +98,7 @@ export function KolektifSlipPrint({ data, backHref }: { data: SlipData; backHref
         <table className="table table-sm table-bordered mb-2" style={{ fontSize: '7.5pt' }}>
           <thead>
             <tr style={{ background: '#0F2744', color: '#fff' }}>
-              <th>Toko / Kredit</th>
+              <th>Potongan Toko</th>
               <th className="text-end">Jumlah</th>
               <th>Simpanan (saldo)</th>
               <th className="text-end">Jumlah</th>
@@ -105,26 +107,19 @@ export function KolektifSlipPrint({ data, backHref }: { data: SlipData; backHref
             </tr>
           </thead>
           <tbody>
-            {(data.toko_rows || []).map((t, i) => (
-              <tr key={i}>
-                <td>{t.lokasi_nama}</td>
-                <td className="text-end mono">{fmtRp(t.jumlah)}</td>
-                {i === 0 && (
-                  <>
-                    <td rowSpan={3}>{simRows.map((s) => `${s.label}: ${fmtRp(s.jumlah)}`).join(' · ')}</td>
-                    <td rowSpan={3} className="text-end mono">
-                      {fmtRp(data.total_simpanan)}
-                    </td>
-                    <td>REGULAR</td>
-                    <td className="text-end mono">{reg ? fmtRp(reg.angsuran) : '—'}</td>
-                  </>
-                )}
-              </tr>
-            ))}
             <tr>
-              <td>KREDIT MOTOR</td>
-              <td className="text-end mono">{fmtRp(data.kredit?.motor)}</td>
-              <td colSpan={2} />
+              <td>{(data.toko_rows || []).map((t) => t.lokasi_nama).filter(Boolean).join(' / ') || 'Toko / POS'}</td>
+              <td className="text-end mono">{fmtRp(totalToko)}</td>
+              <td rowSpan={2}>{simRows.map((s) => `${s.label}: ${fmtRp(s.jumlah)}`).join(' · ')}</td>
+              <td rowSpan={2} className="text-end mono">
+                {fmtRp(data.total_simpanan)}
+              </td>
+              <td>REGULAR</td>
+              <td className="text-end mono">{reg ? fmtRp(reg.angsuran) : '—'}</td>
+            </tr>
+            <tr>
+              <td>Kredit Motor & Elektronik</td>
+              <td className="text-end mono">{fmtRp(totalKredit)}</td>
               <td colSpan={2}>
                 {dar.map((d, i) => (
                   <span key={d.id || i} className="me-2">
@@ -133,16 +128,9 @@ export function KolektifSlipPrint({ data, backHref }: { data: SlipData; backHref
                 ))}
               </td>
             </tr>
-            <tr>
-              <td>KREDIT ELEKTRONIK</td>
-              <td className="text-end mono">{fmtRp(data.kredit?.elektronik)}</td>
-              <td colSpan={2} />
-              <td>Tunggakan</td>
-              <td className="text-end mono">{fmtRp((data.tunggakan_toko || 0) + (data.tunggakan_pin || 0))}</td>
-            </tr>
             <tr className="fw-bold" style={{ background: '#DCFCE7' }}>
               <td colSpan={2} className="text-end">
-                Total Toko: {fmtRp(data.total_toko)}
+                Total Toko: {fmtRp(totalToko)}
               </td>
               <td colSpan={2} className="text-end">
                 Total Simpanan: {fmtRp(data.total_simpanan)}

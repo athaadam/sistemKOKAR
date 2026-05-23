@@ -23,10 +23,15 @@ export default function DashboardPage() {
   const sales = (d.sales_today as { t?: number; c?: number }) || {};
   const cards = [
     { href: '/toko', label: 'Omzet Hari Ini', val: sales.t || 0, sub: `${sales.c || 0} transaksi` },
+    { href: '/toko', label: 'Total Omzet', val: (d.total_omzet as { t?: number })?.t || 0, sub: 'akumulasi semua transaksi' },
+    { href: '/toko', label: 'Total Promo & Diskon', val: (d.total_promo_diskon as { t?: number })?.t || 0, sub: 'semua potongan' },
+    { href: '/toko', label: 'Profit Kotor Hari Ini', val: (d.profit_gross_today as { t?: number })?.t || 0, sub: 'sebelum promo/diskon' },
+    { href: '/toko', label: 'Profit Bersih Hari Ini', val: (d.profit_today as { t?: number })?.t || 0, sub: 'setelah promo/diskon' },
+    { href: '/toko', label: 'Profit Bersih Bulan Ini', val: (d.profit_month as { t?: number })?.t || 0, sub: 'akumulasi bersih' },
     { href: '/pinjaman', label: 'Outstanding Pinjaman', val: (d.total_pinjaman as { t?: number })?.t || 0, sub: 'aktif' },
     { href: '/simpanan', label: 'Total Simpanan', val: (d.total_simpanan as { t?: number })?.t || 0, sub: '3 jenis' },
     { href: '/anggota', label: 'Anggota Aktif', val: (d.anggota_aktif as { c?: number })?.c || 0, sub: 'terdaftar' },
-    { href: '/laporan', label: 'Piutang Toko', val: (d.total_piutang as { t?: number })?.t || 0, sub: 'kredit' },
+    { href: '/laporan?tab=pembelian', label: 'Piutang Toko/Pos', val: (d.total_piutang_toko as { t?: number })?.t || 0, sub: 'hutang pembelian' },
     { href: '/ppob', label: 'Fee PPOB', val: (d.fee_ppob as { t?: number })?.t || 0, sub: 'total fee' },
   ];
 

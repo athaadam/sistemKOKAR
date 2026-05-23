@@ -82,12 +82,24 @@ function renderTabContent(tab: string, data: TabData) {
   const rows = data.rows || [];
 
   if (tab === 'toko') {
+    const omzetByLokasi = Array.isArray(data.omzet_by_lokasi) ? data.omzet_by_lokasi : [];
     return (
       <>
         <div className="row g-2 mb-3 no-print">
-          <StatCard value={`Rp ${rp(data.total)}`} label="Total Omzet" bg="#EFF6FF" border="#BFDBFE" color="#1D4ED8" />
-          <StatCard value={`Rp ${rp(data.omzet_l1)}`} label="KOPMART 1" bg="#DCFCE7" border="#86EFAC" color="#16A34A" />
-          <StatCard value={`Rp ${rp(data.omzet_l2)}`} label="KOPMART 2" bg="#FEF3C7" border="#FCD34D" color="#92400E" />
+          <StatCard value={`Rp ${rp(data.total)}`} label="Total Omzet Periode" bg="#EFF6FF" border="#BFDBFE" color="#1D4ED8" />
+          <StatCard value={`Rp ${rp(data.total_diskon)}`} label="Total Promo & Diskon" bg="#FEF3C7" border="#FCD34D" color="#92400E" />
+          <StatCard value={`Rp ${rp(data.profit_gross)}`} label="Profit Kotor" bg="#DCFCE7" border="#86EFAC" color="#166534" />
+          <StatCard value={`Rp ${rp(data.profit_net)}`} label="Profit Bersih" bg="#F5F3FF" border="#C4B5FD" color="#6D28D9" />
+          {omzetByLokasi.map((lokasi: Record<string, unknown>, i: number) => (
+            <StatCard
+              key={`${String(lokasi.lokasi_id || i)}`}
+              value={`Rp ${rp(lokasi.total)}`}
+              label={String(lokasi.lokasi_nama || lokasi.lokasi_id || 'Lokasi')}
+              bg={i % 2 === 0 ? '#DCFCE7' : '#FEF3C7'}
+              border={i % 2 === 0 ? '#86EFAC' : '#FCD34D'}
+              color={i % 2 === 0 ? '#16A34A' : '#92400E'}
+            />
+          ))}
           <StatCard value={rows.length} label="Transaksi" bg="#F5F3FF" border="#C4B5FD" color="#5B21B6" />
         </div>
         <TabTable minWidth={750}>
@@ -433,6 +445,17 @@ export function LaporanPageContent() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (tab !== 'toko') return undefined;
+    const onFocus = () => load();
+    window.addEventListener('focus', onFocus);
+    const timer = window.setInterval(load, 30000);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.clearInterval(timer);
+    };
+  }, [load, tab]);
 
   useEffect(() => {
     setDraftFrom(tglFrom);

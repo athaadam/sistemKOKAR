@@ -655,7 +655,7 @@ export default function AnggotaPage() {
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="fl">Limit Kredit</label>
+                        <label className="fl">Limit Kredit Toko</label>
                         <input
                           type="number"
                           value={form.limit_kredit}
@@ -664,7 +664,7 @@ export default function AnggotaPage() {
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="fl">Limit Pinjaman</label>
+                        <label className="fl">Limit Kredit Pinjaman</label>
                         <input
                           type="number"
                           value={form.limit_pinjaman}
@@ -673,7 +673,7 @@ export default function AnggotaPage() {
                         />
                       </div>
                       <div className="col-md-4">
-                        <label className="fl">Limit Darurat</label>
+                        <label className="fl">Limit Kredit Emergency</label>
                         <input
                           type="number"
                           value={form.limit_darurat}

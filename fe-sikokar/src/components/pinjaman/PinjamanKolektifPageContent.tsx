@@ -14,6 +14,7 @@ type KolektifRow = {
   nip?: string;
   nama: string;
   dept?: string;
+  gaji?: number;
   no_rek?: string;
   nama_bank?: string;
   pinjaman: PinMini[];
@@ -23,7 +24,11 @@ type KolektifRow = {
   sm_sukarela: number;
   total_simpanan: number;
   total_toko: number;
+  total_toko_kredit: number;
+  total_toko_pg: number;
   total_kredit: number;
+  total_kredit_motor: number;
+  total_kredit_elektronik: number;
   tunggakan: number;
   total_potong: number;
 };
@@ -32,7 +37,11 @@ type Grand = {
   total_angsuran: number;
   total_simpanan: number;
   total_toko: number;
+  total_toko_kredit: number;
+  total_toko_pg: number;
   total_kredit: number;
+  total_kredit_motor: number;
+  total_kredit_elektronik: number;
   tunggakan: number;
   total_potong: number;
 };
@@ -52,7 +61,11 @@ export function PinjamanKolektifPageContent() {
     total_angsuran: 0,
     total_simpanan: 0,
     total_toko: 0,
+    total_toko_kredit: 0,
+    total_toko_pg: 0,
     total_kredit: 0,
+    total_kredit_motor: 0,
+    total_kredit_elektronik: 0,
     tunggakan: 0,
     total_potong: 0,
   });
@@ -259,8 +272,8 @@ export function PinjamanKolektifPageContent() {
         {[
           { label: 'Total Angsuran Pin.', val: grand.total_angsuran, color: '#1D4ED8' },
           { label: 'Total Simpanan', val: grand.total_simpanan, color: '#7C3AED' },
-          { label: 'Kredit Toko', val: grand.total_toko, color: '#D97706' },
-          { label: 'Kredit Motor/Elek', val: grand.total_kredit, color: '#D97706' },
+          { label: 'Potongan Toko', val: grand.total_toko, color: '#D97706' },
+          { label: 'Kredit Motor & Elektronik', val: grand.total_kredit, color: '#B45309' },
           { label: 'Tunggakan', val: grand.tunggakan, color: '#DC2626' },
           { label: 'GRAND TOTAL', val: grand.total_potong, color: '#0F2744' },
         ].map((c) => (
@@ -306,7 +319,7 @@ export function PinjamanKolektifPageContent() {
       </div>
 
       <div className="tbl-wrap" style={{ overflowX: 'auto' }}>
-        <table className="table table-sm mb-0" style={{ minWidth: 1200, fontSize: 12 }}>
+        <table className="table table-sm mb-0" style={{ minWidth: 1400, fontSize: 12 }}>
           <thead>
             <tr>
               <th style={{ width: 34 }}>
@@ -316,6 +329,7 @@ export function PinjamanKolektifPageContent() {
               <th>No Ang</th>
               <th>Nama</th>
               <th>Dept</th>
+              <th className="text-end">Gaji</th>
               <th>No Rekening</th>
               <th>Bank</th>
               <th className="text-end" style={{ background: '#DBEAFE' }}>
@@ -331,10 +345,10 @@ export function PinjamanKolektifPageContent() {
                 Setor Sukarela
               </th>
               <th className="text-end" style={{ background: '#FEF9C3' }}>
-                Kredit Toko
+                Potongan Toko
               </th>
-              <th className="text-end" style={{ background: '#FEF9C3' }}>
-                Kredit Mtr/Elek
+              <th className="text-end" style={{ background: '#FDE68A' }}>
+                Kredit Motor & Elektronik
               </th>
               <th className="text-end" style={{ background: '#FEE2E2' }}>
                 Tunggakan
@@ -348,7 +362,7 @@ export function PinjamanKolektifPageContent() {
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={16} className="text-center text-muted py-4">
+                <td colSpan={17} className="text-center text-muted py-4">
                   Belum ada data
                 </td>
               </tr>
@@ -377,6 +391,9 @@ export function PinjamanKolektifPageContent() {
                       </span>
                     </td>
                     <td style={{ fontSize: 11, color: '#64748B' }}>{r.dept}</td>
+                    <td className="text-end mono" style={{ fontSize: 11 }}>
+                      {r.gaji ? fmtRp(r.gaji) : '—'}
+                    </td>
                     <td className="mono" style={{ fontSize: 10 }}>
                       {r.no_rek || '—'}
                     </td>
@@ -426,7 +443,7 @@ export function PinjamanKolektifPageContent() {
                     <td className="text-end mono" style={{ background: '#FFFBEB', fontSize: 11 }}>
                       {r.total_toko ? fmtRp(r.total_toko) : '—'}
                     </td>
-                    <td className="text-end mono" style={{ background: '#FFFBEB', fontSize: 11 }}>
+                    <td className="text-end mono" style={{ background: '#FDE68A', fontSize: 11 }}>
                       {r.total_kredit ? fmtRp(r.total_kredit) : '—'}
                     </td>
                     <td className="text-end mono fw-semibold" style={{ background: '#FEF2F2', color: '#DC2626', fontSize: 11 }}>
@@ -453,7 +470,7 @@ export function PinjamanKolektifPageContent() {
           {rows.length > 0 && (
             <tfoot>
               <tr className="fw-bold" style={{ background: '#F0F4FF', fontSize: 11 }}>
-                <td colSpan={7} className="text-end" style={{ borderTop: '2px solid #0F2744' }}>
+                <td colSpan={8} className="text-end" style={{ borderTop: '2px solid #0F2744' }}>
                   TOTAL ({rows.length} anggota)
                 </td>
                 <td className="text-end mono" style={{ background: '#EFF6FF', borderTop: '2px solid #0F2744' }}>
@@ -462,8 +479,11 @@ export function PinjamanKolektifPageContent() {
                 <td colSpan={3} className="text-end mono" style={{ background: '#F5F3FF', borderTop: '2px solid #0F2744' }}>
                   {fmtRp(grand.total_simpanan)}
                 </td>
-                <td colSpan={2} className="text-end mono" style={{ background: '#FFFBEB', borderTop: '2px solid #0F2744' }}>
-                  {fmtRp(grand.total_toko + grand.total_kredit)}
+                <td className="text-end mono" style={{ background: '#FFFBEB', borderTop: '2px solid #0F2744' }}>
+                  {fmtRp(grand.total_toko)}
+                </td>
+                <td className="text-end mono" style={{ background: '#FDE68A', borderTop: '2px solid #0F2744' }}>
+                  {fmtRp(grand.total_kredit)}
                 </td>
                 <td className="text-end mono" style={{ background: '#FEF2F2', borderTop: '2px solid #0F2744', color: '#DC2626' }}>
                   {fmtRp(grand.tunggakan)}

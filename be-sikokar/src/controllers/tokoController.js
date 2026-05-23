@@ -126,8 +126,9 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
     const lokasi_id = data.lokasi_id || 'L1';
     let jenis = data.jenis || 'cash';
     const anggota_id = data.anggota_id || null;
-    let payment_channel = data.payment_channel || jenis;
-    if (['kredit', 'potong_gaji'].includes(payment_channel)) jenis = payment_channel;
+    const payment_channel = data.payment_channel || jenis;
+    const creditChannel = ['kredit', 'potong_gaji'].includes(payment_channel);
+    if (creditChannel) jenis = payment_channel;
 
     const pkp = !!data.pkp;
     const items = data.items || [];
@@ -197,7 +198,7 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
       true,
     );
 
-    if (['kredit', 'potong_gaji'].includes(jenis) && anggota_id) {
+    if (creditChannel && anggota_id) {
       const ang = await Q('SELECT limit_kredit,status FROM anggota WHERE id=?', [anggota_id], true);
       if (!ang || ang.status !== 'aktif') return jsonErr(res, 'Anggota tidak aktif');
       const bulan_ini = today().slice(0, 7);
@@ -257,7 +258,7 @@ router.post('/checkout', accessRequired('toko'), asyncHandler(async (req, res) =
       );
     }
 
-    if (['kredit', 'potong_gaji'].includes(jenis) && anggota_id) {
+    if (creditChannel && anggota_id) {
       if (await Q('SELECT id FROM piutang WHERE anggota_id=?', [anggota_id], true)) {
         await X('UPDATE piutang SET saldo=saldo+?,updated_at=NOW() WHERE anggota_id=?', [
           total,

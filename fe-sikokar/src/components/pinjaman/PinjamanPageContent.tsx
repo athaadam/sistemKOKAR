@@ -117,25 +117,35 @@ export function PinjamanPageContent() {
     if (nominal <= 0) return { valid: true, message: '' };
 
     if (ajukan.jenis === 'regular') {
-      // Regular loans: check both limit_pinjaman and max_loans
+      // Regular loans: follow the member's regular loan limit and active regular count.
       const maxLoans = anggota.max_loans ?? 5;
       const pinjamanAktifReg = rows.filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif' && r.jenis === 'regular').length;
       const sisaPinjaman = Math.max(0, maxLoans - pinjamanAktifReg);
 
-      const limitKredit = anggota.limit_pinjaman ?? 0;
-      const pinjamanAktifTotal = rows.filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif').reduce((sum, r) => sum + r.nominal, 0);
-      const sisaLimit = Math.max(0, limitKredit - pinjamanAktifTotal);
+      const limitPinjaman = anggota.limit_pinjaman ?? 0;
+      const pinjamanAktifTotal = rows
+        .filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif' && r.jenis === 'regular')
+        .reduce((sum, r) => sum + r.nominal, 0);
+      const sisaLimit = Math.max(0, limitPinjaman - pinjamanAktifTotal);
 
       if (sisaPinjaman <= 0) {
         return { valid: false, message: '❌ Sudah mencapai batas maksimal pinjaman reguler' };
       }
       if (nominal > sisaLimit) {
-        return { valid: false, message: `❌ Nominal melebihi sisa limit kredit (Sisa: Rp ${fmtRp(sisaLimit)})` };
+        return { valid: false, message: `❌ Nominal melebihi sisa limit pinjaman (Sisa: Rp ${fmtRp(sisaLimit)})` };
       }
-      return { valid: true, message: `✓ Sisa pinjaman: ${sisaPinjaman - 1}/${maxLoans} | Sisa limit: Rp ${fmtRp(sisaLimit - nominal)}` };
+      return { valid: true, message: `✓ Sisa pinjaman aktif: ${sisaPinjaman - 1}/${maxLoans} | Sisa limit pinjaman: Rp ${fmtRp(sisaLimit - nominal)}` };
     } else {
-      // Emergency loans: not affected by limit_pinjaman or max_loans
-      return { valid: true, message: '✓ Pinjaman darurat tidak dibatasi oleh limit reguler' };
+      const limitEmergency = anggota.limit_darurat ?? 0;
+      const pinjamanAktifEmergency = rows
+        .filter((r) => r.anggota_id === ajukan.anggota_id && r.status === 'aktif' && r.jenis === 'darurat')
+        .reduce((sum, r) => sum + r.nominal, 0);
+      const sisaLimit = Math.max(0, limitEmergency - pinjamanAktifEmergency);
+
+      if (nominal > sisaLimit) {
+        return { valid: false, message: `❌ Nominal melebihi sisa limit emergency (Sisa: Rp ${fmtRp(sisaLimit)})` };
+      }
+      return { valid: true, message: `✓ Sisa limit emergency: Rp ${fmtRp(sisaLimit - nominal)}` };
     }
   }, [ajukan.anggota_id, ajukan.jenis, ajukan.nominal, anggotaList, rows]);
 
@@ -203,12 +213,19 @@ export function PinjamanPageContent() {
       const maxLoans = a.max_loans ?? 5;
       const pinjamanAktifReg = rows.filter((r) => r.anggota_id === aid && r.status === 'aktif' && r.jenis === 'regular').length;
       const sisaPinjaman = Math.max(0, maxLoans - pinjamanAktifReg);
-      const limitKredit = a.limit_pinjaman ?? 0;
-      const pinjamanAktifTotal = rows.filter((r) => r.anggota_id === aid && r.status === 'aktif').reduce((sum, r) => sum + r.nominal, 0);
-      const sisaLimit = Math.max(0, limitKredit - pinjamanAktifTotal);
+      const limitPinjaman = a.limit_pinjaman ?? 0;
+      const limitEmergency = a.limit_darurat ?? 0;
+      const pinjamanAktifRegTotal = rows
+        .filter((r) => r.anggota_id === aid && r.status === 'aktif' && r.jenis === 'regular')
+        .reduce((sum, r) => sum + r.nominal, 0);
+      const pinjamanAktifEmergency = rows
+        .filter((r) => r.anggota_id === aid && r.status === 'aktif' && r.jenis === 'darurat')
+        .reduce((sum, r) => sum + r.nominal, 0);
+      const sisaLimitPinjaman = Math.max(0, limitPinjaman - pinjamanAktifRegTotal);
+      const sisaLimitEmergency = Math.max(0, limitEmergency - pinjamanAktifEmergency);
 
       setPinInfo(
-        `Regular - Limit Kredit: Rp ${fmtRp(limitKredit)} (Sisa: Rp ${fmtRp(sisaLimit)}) | Sisa Max Pinjaman: ${sisaPinjaman}/${maxLoans} | Emergency - Limit: Rp ${fmtRp(a.limit_darurat)}`,
+        `Pinjaman - Limit: Rp ${fmtRp(limitPinjaman)} (Sisa: Rp ${fmtRp(sisaLimitPinjaman)}) | Sisa Max Pinjaman: ${sisaPinjaman}/${maxLoans} | Emergency - Limit: Rp ${fmtRp(limitEmergency)} (Sisa: Rp ${fmtRp(sisaLimitEmergency)}) | Toko - Limit Kredit: Rp ${fmtRp(a.limit_kredit ?? 0)}`,
       );
     } else {
       setPinInfo('');

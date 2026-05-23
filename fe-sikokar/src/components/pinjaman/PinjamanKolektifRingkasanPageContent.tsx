@@ -13,7 +13,13 @@ type RingkasanRow = {
   nama: string;
   dept?: string;
   toko: number;
+  sim_pokok: number;
+  sim_wajib: number;
+  sim_sukarela: number;
   simpanan: number;
+  kredit_motor: number;
+  kredit_elektronik: number;
+  total_kredit: number;
   cicilan: number;
   tunggakan: number;
   total: number;
@@ -21,7 +27,13 @@ type RingkasanRow = {
 
 type Grand = {
   toko: number;
+  sim_pokok: number;
+  sim_wajib: number;
+  sim_sukarela: number;
   simpanan: number;
+  kredit_motor: number;
+  kredit_elektronik: number;
+  total_kredit: number;
   cicilan: number;
   tunggakan: number;
   total: number;
@@ -31,7 +43,19 @@ export function PinjamanKolektifRingkasanPageContent() {
   const searchParams = useSearchParams();
   const [bulan, setBulan] = useState(searchParams.get('bulan') || bulanIni());
   const [rows, setRows] = useState<RingkasanRow[]>([]);
-  const [grand, setGrand] = useState<Grand>({ toko: 0, simpanan: 0, cicilan: 0, tunggakan: 0, total: 0 });
+  const [grand, setGrand] = useState<Grand>({
+    toko: 0,
+    sim_pokok: 0,
+    sim_wajib: 0,
+    sim_sukarela: 0,
+    simpanan: 0,
+    kredit_motor: 0,
+    kredit_elektronik: 0,
+    total_kredit: 0,
+    cicilan: 0,
+    tunggakan: 0,
+    total: 0,
+  });
   const [hdr, setHdr] = useState<{ header1?: string; header2?: string; nama_kop?: string; alamat?: string }>({});
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
@@ -45,7 +69,21 @@ export function PinjamanKolektifRingkasanPageContent() {
       )
       .then((r) => {
         setRows(r.rows || []);
-        setGrand(r.grand || { toko: 0, simpanan: 0, cicilan: 0, tunggakan: 0, total: 0 });
+        setGrand(
+          r.grand || {
+            toko: 0,
+            sim_pokok: 0,
+            sim_wajib: 0,
+            sim_sukarela: 0,
+            simpanan: 0,
+            kredit_motor: 0,
+            kredit_elektronik: 0,
+            total_kredit: 0,
+            cicilan: 0,
+            tunggakan: 0,
+            total: 0,
+          },
+        );
         if (r.bulan) setBulan(r.bulan);
         setHdr(r.hdr || {});
       })
@@ -75,8 +113,12 @@ export function PinjamanKolektifRingkasanPageContent() {
   }
 
   const summaryCards = [
-    { label: 'Total Belanja Toko', val: grand.toko, color: '#1D4ED8' },
-    { label: 'Total Simpanan', val: grand.simpanan, color: '#7C3AED' },
+    { label: 'Potongan Toko', val: grand.toko, color: '#1D4ED8' },
+    { label: 'Simpanan Pokok PG', val: grand.sim_pokok, color: '#7C3AED' },
+    { label: 'Simpanan Wajib PG', val: grand.sim_wajib, color: '#8B5CF6' },
+    { label: 'Simpanan Sukarela PG', val: grand.sim_sukarela, color: '#A855F7' },
+    { label: 'Kredit Motor PG', val: grand.kredit_motor, color: '#B45309' },
+    { label: 'Kredit Elektronik PG', val: grand.kredit_elektronik, color: '#C2410C' },
     { label: 'Total Cicilan+Bunga', val: grand.cicilan, color: '#D97706' },
     { label: 'Total Tunggakan', val: grand.tunggakan, color: '#DC2626' },
     { label: 'GRAND TOTAL POTONGAN', val: grand.total, color: '#0F2744' },
@@ -147,8 +189,14 @@ export function PinjamanKolektifRingkasanPageContent() {
             <th>NIP</th>
             <th>Nama Anggota</th>
             <th>Dept</th>
-            <th className="rk-num">Belanja Toko</th>
-            <th className="rk-num">Simpanan</th>
+            <th className="rk-num">Potongan Toko</th>
+            <th className="rk-num">Sim Pokok PG</th>
+            <th className="rk-num">Sim Wajib PG</th>
+            <th className="rk-num">Sim Sukarela PG</th>
+            <th className="rk-num">Total Simpanan PG</th>
+            <th className="rk-num">Kredit Motor PG</th>
+            <th className="rk-num">Kredit Elektronik PG</th>
+            <th className="rk-num">Total Kredit PG</th>
             <th className="rk-num">Cicilan+Bunga</th>
             <th className="rk-num">Tunggakan</th>
             <th className="rk-num">TOTAL POTONGAN</th>
@@ -157,7 +205,7 @@ export function PinjamanKolektifRingkasanPageContent() {
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={10} className="text-center text-muted py-3">
+              <td colSpan={16} className="text-center text-muted py-3">
                 Tidak ada data
               </td>
             </tr>
@@ -176,7 +224,13 @@ export function PinjamanKolektifRingkasanPageContent() {
                 </td>
                 <td style={{ color: '#555', fontSize: 9 }}>{r.dept}</td>
                 <td className={`rk-num ${r.toko === 0 ? 'text-muted' : ''}`}>{r.toko ? fmtRp(r.toko) : '—'}</td>
+                <td className={`rk-num ${r.sim_pokok === 0 ? 'text-muted' : ''}`}>{r.sim_pokok ? fmtRp(r.sim_pokok) : '—'}</td>
+                <td className={`rk-num ${r.sim_wajib === 0 ? 'text-muted' : ''}`}>{r.sim_wajib ? fmtRp(r.sim_wajib) : '—'}</td>
+                <td className={`rk-num ${r.sim_sukarela === 0 ? 'text-muted' : ''}`}>{r.sim_sukarela ? fmtRp(r.sim_sukarela) : '—'}</td>
                 <td className={`rk-num ${r.simpanan === 0 ? 'text-muted' : ''}`}>{r.simpanan ? fmtRp(r.simpanan) : '—'}</td>
+                <td className={`rk-num ${r.kredit_motor === 0 ? 'text-muted' : ''}`}>{r.kredit_motor ? fmtRp(r.kredit_motor) : '—'}</td>
+                <td className={`rk-num ${r.kredit_elektronik === 0 ? 'text-muted' : ''}`}>{r.kredit_elektronik ? fmtRp(r.kredit_elektronik) : '—'}</td>
+                <td className={`rk-num ${r.total_kredit === 0 ? 'text-muted' : ''}`}>{r.total_kredit ? fmtRp(r.total_kredit) : '—'}</td>
                 <td className={`rk-num ${r.cicilan === 0 ? 'text-muted' : ''}`} style={r.cicilan > 0 ? { fontWeight: 'bold' } : undefined}>
                   {r.cicilan ? fmtRp(r.cicilan) : '—'}
                 </td>
@@ -197,7 +251,13 @@ export function PinjamanKolektifRingkasanPageContent() {
                 TOTAL ({rows.length} anggota)
               </td>
               <td className="rk-num">{fmtRp(grand.toko)}</td>
+              <td className="rk-num">{fmtRp(grand.sim_pokok)}</td>
+              <td className="rk-num">{fmtRp(grand.sim_wajib)}</td>
+              <td className="rk-num">{fmtRp(grand.sim_sukarela)}</td>
               <td className="rk-num">{fmtRp(grand.simpanan)}</td>
+              <td className="rk-num">{fmtRp(grand.kredit_motor)}</td>
+              <td className="rk-num">{fmtRp(grand.kredit_elektronik)}</td>
+              <td className="rk-num">{fmtRp(grand.total_kredit)}</td>
               <td className="rk-num">{fmtRp(grand.cicilan)}</td>
               <td className="rk-num">{fmtRp(grand.tunggakan)}</td>
               <td className="rk-num" style={{ fontSize: 12, background: '#064E3B' }}>

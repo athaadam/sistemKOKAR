@@ -24,12 +24,17 @@ async function buildSlipData(a, bulan) {
     [aid, tgl_from, tgl_to],
   );
   const total_toko = toko_rows.reduce((s, r) => s + Number(r.jumlah || 0), 0);
-  const sm_p = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='pokok'", [aid], true);
-  const sm_w = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='wajib'", [aid], true);
-  const sm_s = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='sukarela'", [aid], true);
-  const sm_pokok = sm_p?.t ?? 0;
-  const sm_wajib = sm_w?.t ?? 0;
-  const sm_sukarela = sm_s?.t ?? 0;
+  const sm_trx = await Q(
+    `SELECT jenis, COALESCE(SUM(nominal),0) as jumlah
+     FROM simpanan_trx
+     WHERE anggota_id=? AND tipe='setor' AND metode IN ('potong_gaji','potong-gaji') AND tgl>=? AND tgl<=?
+     GROUP BY jenis`,
+    [aid, tgl_from, tgl_to],
+  );
+  const sm_map = Object.fromEntries(sm_trx.map((r) => [r.jenis, r.jumlah]));
+  const sm_pokok = Number(sm_map.pokok || 0);
+  const sm_wajib = Number(sm_map.wajib || 0);
+  const sm_sukarela = Number(sm_map.sukarela || 0);
   const simpanan_rows = [
     { label: 'SIMPANAN POKOK', jumlah: sm_pokok },
     { label: 'SIMPANAN WAJIB', jumlah: sm_wajib },
@@ -107,6 +112,9 @@ router.post('/ajukan', accessRequired('pinjaman'), asyncHandler(async (req, res)
     const ang = await Q('SELECT * FROM anggota WHERE id=?', [anggota_id], true);
     if (!ang) return jsonErr(res, 'Anggota tidak ditemukan');
 
+    const limitPinjaman = Number(ang.limit_pinjaman) > 0 ? Number(ang.limit_pinjaman) : await getRegMax();
+    const limitEmergency = Number(ang.limit_darurat) > 0 ? Number(ang.limit_darurat) : await getDarPerAjuan();
+
     if (jenis === 'regular') {
       const aktif_reg = (await Q(
         "SELECT COUNT(*) as c FROM pinjaman WHERE anggota_id=? AND jenis='regular' AND status='aktif'",
@@ -115,7 +123,8 @@ router.post('/ajukan', accessRequired('pinjaman'), asyncHandler(async (req, res)
       ))?.c ?? 0;
       if (aktif_reg > 0) return jsonErr(res, 'Pinjaman regular masih aktif — harus lunas/pelunasan dahulu sebelum mengajukan kembali');
       const regMax = await getRegMax();
-      if (nominal > regMax) return jsonErr(res, `Melebihi batas pinjaman regular (${fmtRp(regMax)})`);
+      const effectiveLimit = Math.min(limitPinjaman, regMax);
+      if (nominal > effectiveLimit) return jsonErr(res, `Melebihi limit pinjaman anggota (${fmtRp(effectiveLimit)})`);
     } else if (jenis === 'darurat') {
       const aktif_dar = await Q(
         "SELECT COUNT(*) as c, COALESCE(SUM(sisa_pokok),0) as total FROM pinjaman WHERE anggota_id=? AND jenis='darurat' AND status='aktif'",
@@ -126,12 +135,12 @@ router.post('/ajukan', accessRequired('pinjaman'), asyncHandler(async (req, res)
       if ((aktif_dar?.c ?? 0) >= darMaxAktif) {
         return jsonErr(res, `Pinjaman darurat aktif sudah maksimal (${darMaxAktif}x) — harus lunas dahulu`);
       }
-      const darPer = await getDarPerAjuan();
-      if (nominal > darPer) return jsonErr(res, `Maks pinjaman darurat per pengajuan adalah ${fmtRp(darPer)}`);
       const darMax = await getDarMax();
-      if ((aktif_dar?.total ?? 0) + nominal > darMax) {
-        const sisa_bisa = Math.max(0, darMax - (aktif_dar?.total ?? 0));
-        return jsonErr(res, `Total pinjaman darurat akan melebihi ${fmtRp(darMax)}. Maksimal bisa diajukan: ${fmtRp(sisa_bisa)}`);
+      const effectiveLimit = Math.min(limitEmergency, darMax);
+      if (nominal > effectiveLimit) return jsonErr(res, `Melebihi limit emergency anggota (${fmtRp(effectiveLimit)})`);
+      if ((aktif_dar?.total ?? 0) + nominal > effectiveLimit) {
+        const sisa_bisa = Math.max(0, effectiveLimit - (aktif_dar?.total ?? 0));
+        return jsonErr(res, `Total pinjaman darurat akan melebihi ${fmtRp(effectiveLimit)}. Maksimal bisa diajukan: ${fmtRp(sisa_bisa)}`);
       }
     }
 
@@ -351,16 +360,23 @@ router.get('/kolektif', accessRequired('pinjaman'), asyncHandler(async (req, res
       );
       const sm_map = Object.fromEntries(sm.map((r) => [r.jenis, r.jml]));
       const total_simpanan = Object.values(sm_map).reduce((s, v) => s + Number(v || 0), 0);
-      const bel = await Q(
-        "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND jenis='kredit' AND tgl>=? AND tgl<=?",
+      const bel_pg = await Q(
+        "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND payment_channel='potong_gaji' AND tgl>=? AND tgl<=?",
         [aid, tgl_from, tgl_to],
         true,
       );
-      const total_toko = bel?.t ?? 0;
+      const kredit_pg = await Q(
+        `SELECT COALESCE(SUM(kb.nominal),0) as t
+         FROM kredit_bayar kb
+         LEFT JOIN kredit_barang k ON kb.kredit_id = k.id
+         WHERE k.anggota_id=? AND kb.metode IN ('potong_gaji','potong-gaji') AND kb.tgl>=? AND kb.tgl<=?`,
+        [aid, tgl_from, tgl_to],
+        true,
+      );
+      const total_toko = bel_pg?.t ?? 0;
       const piu = await Q('SELECT COALESCE(saldo,0) as t FROM piutang WHERE anggota_id=?', [aid], true);
       const tunggakan = piu?.t ?? 0;
-      const kr = await Q("SELECT COALESCE(SUM(angsuran),0) as t FROM kredit_barang WHERE anggota_id=? AND status='aktif'", [aid], true);
-      const total_kredit = kr?.t ?? 0;
+      const total_kredit = kredit_pg?.t ?? 0;
       const total_potong = total_angsuran + total_simpanan + total_toko + tunggakan + total_kredit;
       if (total_potong > 0 || pins.length) {
         result.push({
@@ -538,13 +554,18 @@ router.get('/kolektif/slip_batch', accessRequired('pinjaman'), asyncHandler(asyn
          WHERE p.anggota_id=? AND p.jenis='kredit' AND p.tgl>=? AND p.tgl<=? GROUP BY p.lokasi_id`,
         [aid, tgl_from, tgl_to],
       );
-      const sm_p = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='pokok'", [aid], true);
-      const sm_w = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='wajib'", [aid], true);
-      const sm_s = await Q("SELECT COALESCE(saldo,0) as t FROM simpanan WHERE anggota_id=? AND jenis='sukarela'", [aid], true);
+      const sm_trx = await Q(
+        `SELECT jenis, COALESCE(SUM(nominal),0) as jumlah
+         FROM simpanan_trx
+         WHERE anggota_id=? AND tipe='setor' AND metode IN ('potong_gaji','potong-gaji') AND tgl>=? AND tgl<=?
+         GROUP BY jenis`,
+        [aid, tgl_from, tgl_to],
+      );
+      const sm_map = Object.fromEntries(sm_trx.map((r) => [r.jenis, r.jumlah]));
       const simpanan_rows = [
-        { label: 'SIM POKOK', jumlah: sm_p?.t ?? 0 },
-        { label: 'SIM WAJIB', jumlah: sm_w?.t ?? 0 },
-        { label: 'SIM SUKARELA', jumlah: sm_s?.t ?? 0 },
+        { label: 'SIM POKOK', jumlah: Number(sm_map.pokok || 0) },
+        { label: 'SIM WAJIB', jumlah: Number(sm_map.wajib || 0) },
+        { label: 'SIM SUKARELA', jumlah: Number(sm_map.sukarela || 0) },
       ];
       const pinjaman_regular = await Q(
         `SELECT *,(SELECT COUNT(*) FROM pinjaman_bayar WHERE pinjaman_id=pinjaman.id) as cicilan_ke
@@ -584,26 +605,49 @@ async function buildRingkasan(bulan) {
   const result = [];
   for (let i = 0; i < anggota_rows.length; i++) {
     const a = anggota_rows[i];
-    const bel = await Q(
-      "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND jenis='kredit' AND tgl>=? AND tgl<=?",
+    const toko_pg = await Q(
+      "SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE anggota_id=? AND payment_channel='potong_gaji' AND tgl>=? AND tgl<=?",
       [a.id, tgl_from, tgl_to],
       true,
     );
-    const toko = bel?.t ?? 0;
-    const sim_bln = a.gaji ? a.gaji * 0.02 : 0;
+    const toko = toko_pg?.t ?? 0;
+    const sim_rows = await Q(
+      `SELECT jenis, COALESCE(SUM(nominal),0) as jumlah
+       FROM simpanan_trx
+       WHERE anggota_id=? AND tipe='setor' AND metode IN ('potong_gaji','potong-gaji') AND substr(tgl,1,7)=?
+       GROUP BY jenis`,
+      [a.id, bulan],
+    );
+    const sim_map = Object.fromEntries(sim_rows.map((r) => [r.jenis, Number(r.jumlah || 0)]));
+    const sim_pokok = Number(sim_map.pokok || 0);
+    const sim_wajib = Number(sim_map.wajib || 0);
+    const sim_sukarela = Number(sim_map.sukarela || 0);
+    const simpanan = sim_pokok + sim_wajib + sim_sukarela;
+    const kredit_rows = await Q(
+      `SELECT k.jenis, COALESCE(SUM(kb.nominal),0) as jumlah
+       FROM kredit_bayar kb
+       LEFT JOIN kredit_barang k ON kb.kredit_id = k.id
+       WHERE k.anggota_id=? AND kb.metode IN ('potong_gaji','potong-gaji') AND kb.tgl>=? AND kb.tgl<=?
+       GROUP BY k.jenis`,
+      [a.id, tgl_from, tgl_to],
+    );
+    const kredit_map = Object.fromEntries(kredit_rows.map((r) => [r.jenis, Number(r.jumlah || 0)]));
+    const kredit_motor = Number(kredit_map.motor || 0);
+    const kredit_elektronik = Number(kredit_map.elektronik || 0);
+    const total_kredit = kredit_motor + kredit_elektronik;
     const pinjaman = await Q("SELECT COALESCE(SUM(angsuran),0) as ang FROM pinjaman WHERE anggota_id=? AND status='aktif'", [a.id], true);
     const cicilan = pinjaman?.ang ?? 0;
     const piu = await Q('SELECT COALESCE(saldo,0) as t FROM piutang WHERE anggota_id=?', [a.id], true);
     const tung = piu?.t ?? 0;
-    const total = toko + sim_bln + cicilan + tung;
-    if (total > 0 || [toko, sim_bln, cicilan, tung].some((x) => x > 0)) {
+    const total = toko + simpanan + total_kredit + cicilan + tung;
+    if (total > 0 || [toko, simpanan, total_kredit, cicilan, tung].some((x) => x > 0)) {
       result.push({
         urut: i + 1, no: a.no, nip: a.nip, nama: a.nama, dept: a.dept, jabatan: a.jabatan,
-        toko, simpanan: sim_bln, cicilan, tunggakan: tung, total,
+        toko, sim_pokok, sim_wajib, sim_sukarela, simpanan, kredit_motor, kredit_elektronik, total_kredit, cicilan, tunggakan: tung, total,
       });
     }
   }
-  const grand = ['toko', 'simpanan', 'cicilan', 'tunggakan', 'total'].reduce(
+  const grand = ['toko', 'sim_pokok', 'sim_wajib', 'sim_sukarela', 'simpanan', 'kredit_motor', 'kredit_elektronik', 'total_kredit', 'cicilan', 'tunggakan', 'total'].reduce(
     (g, k) => ({ ...g, [k]: result.reduce((s, r) => s + Number(r[k] || 0), 0) }),
     {},
   );
@@ -628,9 +672,11 @@ router.get('/kolektif/ringkasan/export', accessRequired('pinjaman'), asyncHandle
     const { result } = await buildRingkasan(bulan);
     const exportRows = result.map((r, i) => ({
       no: i + 1, no_ang: r.no, nip: r.nip, nama: r.nama, dept: r.dept,
-      toko: r.toko, simpanan: r.simpanan, cicilan_bunga: r.cicilan, tunggakan: r.tunggakan, total: r.total,
+      toko: r.toko, sim_pokok: r.sim_pokok, sim_wajib: r.sim_wajib, sim_sukarela: r.sim_sukarela, simpanan: r.simpanan,
+      kredit_motor: r.kredit_motor, kredit_elektronik: r.kredit_elektronik, total_kredit: r.total_kredit,
+      cicilan_bunga: r.cicilan, tunggakan: r.tunggakan, total: r.total,
     }));
-    const cols = ['no', 'no_ang', 'nip', 'nama', 'dept', 'toko', 'simpanan', 'cicilan_bunga', 'tunggakan', 'total'];
+    const cols = ['no', 'no_ang', 'nip', 'nama', 'dept', 'toko', 'sim_pokok', 'sim_wajib', 'sim_sukarela', 'simpanan', 'kredit_motor', 'kredit_elektronik', 'total_kredit', 'cicilan_bunga', 'tunggakan', 'total'];
     return sendExport(fmt, exportRows, cols, `Ringkasan Potongan ${bulan}`, `ringkasan_${bulan}.xlsx`, res);
   } catch (e) {
     return jsonErr(res, e.message, 500);

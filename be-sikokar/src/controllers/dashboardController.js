@@ -8,11 +8,70 @@ function registerRoutes(router, deps) {
   try {
     const t = today();
     const salesToday = await Q(
-      'SELECT COALESCE(SUM(total),0) as t, COUNT(*) as c FROM penjualan WHERE tgl=?',
+      'SELECT COALESCE(SUM(total),0) as t, COUNT(*) as c FROM penjualan WHERE tgl=? AND void=0',
       [t],
       true,
     );
-    const totalPiutang = await Q('SELECT COALESCE(SUM(saldo),0) as t FROM piutang', [], true);
+    const totalOmzet = await Q(
+      'SELECT COALESCE(SUM(total),0) as t FROM penjualan WHERE void=0',
+      [],
+      true,
+    );
+    const totalPromoDiskon = await Q(
+      'SELECT COALESCE(SUM(diskon_total),0) as t FROM penjualan WHERE void=0',
+      [],
+      true,
+    );
+    const bulan = t.slice(0, 7);
+    const grossToday = await Q(
+      `SELECT COALESCE(SUM(pi.harga * pi.qty),0) as t
+       FROM penjualan p
+       JOIN penjualan_item pi ON pi.penjualan_id = p.id
+       WHERE p.tgl = ? AND p.void = 0`,
+      [t],
+      true,
+    );
+    const cogsToday = await Q(
+      `SELECT COALESCE(SUM(COALESCE(b.harga_beli,0) * pi.qty),0) as t
+       FROM penjualan p
+       JOIN penjualan_item pi ON pi.penjualan_id = p.id
+       LEFT JOIN barang b ON pi.barang_id = b.id
+       WHERE p.tgl = ? AND p.void = 0`,
+      [t],
+      true,
+    );
+    const discountToday = await Q(
+      'SELECT COALESCE(SUM(diskon_total),0) as t FROM penjualan WHERE tgl=? AND void=0',
+      [t],
+      true,
+    );
+    const grossMonth = await Q(
+      `SELECT COALESCE(SUM(pi.harga * pi.qty),0) as t
+       FROM penjualan p
+       JOIN penjualan_item pi ON pi.penjualan_id = p.id
+       WHERE substr(p.tgl,1,7) = ? AND p.void = 0`,
+      [bulan],
+      true,
+    );
+    const cogsMonth = await Q(
+      `SELECT COALESCE(SUM(COALESCE(b.harga_beli,0) * pi.qty),0) as t
+       FROM penjualan p
+       JOIN penjualan_item pi ON pi.penjualan_id = p.id
+       LEFT JOIN barang b ON pi.barang_id = b.id
+       WHERE substr(p.tgl,1,7) = ? AND p.void = 0`,
+      [bulan],
+      true,
+    );
+    const discountMonth = await Q(
+      'SELECT COALESCE(SUM(diskon_total),0) as t FROM penjualan WHERE substr(tgl,1,7)=? AND void=0',
+      [bulan],
+      true,
+    );
+    const profitGrossToday = Number(grossToday?.t ?? 0) - Number(cogsToday?.t ?? 0);
+    const profitToday = Number(grossToday?.t ?? 0) - Number(discountToday?.t ?? 0) - Number(cogsToday?.t ?? 0);
+    const profitGrossMonth = Number(grossMonth?.t ?? 0) - Number(cogsMonth?.t ?? 0);
+    const profitMonth = Number(grossMonth?.t ?? 0) - Number(discountMonth?.t ?? 0) - Number(cogsMonth?.t ?? 0);
+    const totalPiutangToko = await Q("SELECT COALESCE(SUM(total),0) as t FROM pembelian WHERE status='hutang'", [], true);
     const totalPinjaman = await Q(
       "SELECT COALESCE(SUM(sisa_pokok),0) as t FROM pinjaman WHERE status='aktif'",
       [],
@@ -48,7 +107,13 @@ function registerRoutes(router, deps) {
     return jsonOk(res, {
       data: {
         sales_today: salesToday,
-        total_piutang: totalPiutang,
+        total_omzet: totalOmzet,
+        total_promo_diskon: totalPromoDiskon,
+        profit_gross_today: { t: profitGrossToday },
+        profit_today: { t: profitToday },
+        profit_gross_month: { t: profitGrossMonth },
+        profit_month: { t: profitMonth },
+        total_piutang_toko: totalPiutangToko,
         total_pinjaman: totalPinjaman,
         total_simpanan: totalSimpanan,
         anggota_aktif: anggotaAktif,

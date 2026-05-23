@@ -13,10 +13,31 @@ async function loadTabData(tab, tgl_from, tgl_to) {
     const params = [];
     if (tgl_from) { sql += ' AND p.tgl>=?'; params.push(tgl_from); }
     if (tgl_to) { sql += ' AND p.tgl<=?'; params.push(tgl_to); }
-    data.rows = await Q(sql + ' ORDER BY p.tgl DESC LIMIT 500', params);
+    sql += ' AND COALESCE(p.void,0)=0';
+    data.rows = await Q(sql + ' ORDER BY p.created_at DESC LIMIT 500', params);
     data.total = data.rows.reduce((s, r) => s + Number(r.total || 0), 0);
-    data.omzet_l1 = data.rows.filter((r) => r.lokasi_id === 'L1').reduce((s, r) => s + Number(r.total || 0), 0);
-    data.omzet_l2 = data.rows.filter((r) => r.lokasi_id === 'L2').reduce((s, r) => s + Number(r.total || 0), 0);
+    data.total_subtotal = data.rows.reduce((s, r) => s + Number(r.subtotal || 0), 0);
+    data.total_diskon = data.rows.reduce((s, r) => s + Number(r.diskon_total || 0), 0);
+    const cogsRows = await Q(
+      `SELECT COALESCE(SUM(COALESCE(b.harga_beli,0) * pi.qty),0) as t
+       FROM penjualan p
+       JOIN penjualan_item pi ON pi.penjualan_id=p.id
+       LEFT JOIN barang b ON pi.barang_id=b.id
+       WHERE 1=1${tgl_from ? ' AND p.tgl>=?' : ''}${tgl_to ? ' AND p.tgl<=?' : ''} AND COALESCE(p.void,0)=0`,
+      params,
+      true,
+    );
+    const cogs = Number(cogsRows?.t ?? 0);
+    data.profit_gross = data.total_subtotal - cogs;
+    data.profit_net = data.total_subtotal - data.total_diskon - cogs;
+    data.omzet_by_lokasi = await Q(
+      `SELECT p.lokasi_id, COALESCE(l.nama,'Lokasi Tidak Diketahui') as lokasi_nama, COALESCE(SUM(p.total),0) as total
+       FROM penjualan p LEFT JOIN lokasi l ON p.lokasi_id=l.id
+       WHERE 1=1${tgl_from ? ' AND p.tgl>=?' : ''}${tgl_to ? ' AND p.tgl<=?' : ''} AND COALESCE(p.void,0)=0
+       GROUP BY p.lokasi_id, l.nama
+       ORDER BY total DESC`,
+      params,
+    );
   } else if (tab === 'pembelian') {
     let sql = `SELECT pb.*,s.nama as supplier_nama,l.nama as lokasi_nama FROM pembelian pb
       LEFT JOIN supplier s ON pb.supplier_id=s.id LEFT JOIN lokasi l ON pb.lokasi_id=l.id WHERE 1=1`;
@@ -124,7 +145,8 @@ router.get('/export', accessRequired('laporan'), asyncHandler(async (req, res) =
       const params = [];
       if (tgl_from) { sql += ' AND p.tgl>=?'; params.push(tgl_from); }
       if (tgl_to) { sql += ' AND p.tgl<=?'; params.push(tgl_to); }
-      rows = await Q(sql + ' ORDER BY p.tgl DESC', params);
+      sql += ' AND COALESCE(p.void,0)=0';
+      rows = await Q(sql + ' ORDER BY p.created_at DESC', params);
       cols = ['no', 'tgl', 'toko', 'jenis', 'anggota', 'subtotal', 'diskon_total', 'ppn_total', 'total'];
     } else if (tab === 'pembelian') {
       let sql = `SELECT pb.no,pb.tgl,s.nama as supplier,l.nama as toko,pb.total,pb.status
