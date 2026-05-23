@@ -243,7 +243,12 @@ export default function AnggotaPage() {
   }
 
   async function onDelete(row: AnggotaRow) {
-    if (!confirm(`Hapus anggota ${row.nama}?\nData yang terkait akan ikut terhapus.`)) return;
+    if (row.status === 'aktif') {
+      setFlash('Ubah status anggota melalui form edit sebelum menghapus');
+      setFlashType('warning');
+      return;
+    }
+    if (!confirm(`Hapus data anggota ${row.nama} yang sudah non-aktif?\nData yang terkait akan ikut terhapus.`)) return;
     setFlash('');
     try {
       const r = await api.delete<{ message?: string }>(`/anggota/${row.id}`);
@@ -486,14 +491,16 @@ export default function AnggotaPage() {
                     >
                       <i className="bi bi-pencil" /> Edit
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn-act btn-outline-danger"
-                      onClick={() => onDelete(r)}
-                      title="Hapus"
-                    >
-                      <i className="bi bi-trash" /> Hapus
-                    </button>
+                    {r.status !== 'aktif' && (
+                      <button
+                        type="button"
+                        className="btn btn-act btn-outline-danger"
+                        onClick={() => onDelete(r)}
+                        title="Hapus anggota non-aktif"
+                      >
+                        <i className="bi bi-trash" /> Hapus
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))
@@ -705,7 +712,15 @@ export default function AnggotaPage() {
                         <label className="fl">Status Detail</label>
                         <select
                           value={form.status_detail}
-                          onChange={(e) => setField('status_detail', e.target.value)}
+                          onChange={(e) => {
+                            const newDetail = e.target.value;
+                            setField('status_detail', newDetail);
+                            if (['keluar', 'pensiun', 'meninggal'].includes(newDetail)) {
+                              setField('status', 'non-aktif');
+                            } else {
+                              setField('status', 'aktif');
+                            }
+                          }}
                           className="form-select form-select-sm"
                         >
                           <option value="aktif">Aktif</option>

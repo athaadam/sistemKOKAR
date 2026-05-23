@@ -82,6 +82,9 @@ router.post('/save', accessRequired('kredit'), asyncHandler(async (req, res) => 
     }
     const harga_beli = Number(f.harga_beli) || 0;
     const dp = Number(f.dp) || 0;
+    if (dp > harga_beli) {
+      return jsonErr(res, 'DP tidak boleh lebih besar dari harga beli');
+    }
     const pokok = harga_beli - dp;
     const bunga_pct = Number(f.bunga_pct) || (await getBungaRegular());
     const tenor = Number(f.tenor) || 12;

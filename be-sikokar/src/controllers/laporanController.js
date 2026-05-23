@@ -173,7 +173,8 @@ router.get('/export', accessRequired('laporan'), asyncHandler(async (req, res) =
         `SELECT a.no,a.nip,a.nama,a.dept,
           COALESCE((SELECT saldo FROM simpanan WHERE anggota_id=a.id AND jenis='pokok'),0) as pokok,
           COALESCE((SELECT saldo FROM simpanan WHERE anggota_id=a.id AND jenis='wajib'),0) as wajib,
-          COALESCE((SELECT saldo FROM simpanan WHERE anggota_id=a.id AND jenis='sukarela'),0) as sukarela FROM anggota a`,
+          COALESCE((SELECT saldo FROM simpanan WHERE anggota_id=a.id AND jenis='sukarela'),0) as sukarela FROM anggota a WHERE a.status=?`,
+        ['aktif'],
       );
       cols = ['no', 'nip', 'nama', 'dept', 'pokok', 'wajib', 'sukarela'];
     } else if (tab === 'kredit') {

@@ -104,6 +104,12 @@ export function KreditPageContent() {
     [form, bungaDef],
   );
 
+  const isFormValid = useMemo(() => {
+    const hargaBeli = Number(form.harga_beli) || 0;
+    const dp = Number(form.dp) || 0;
+    return hargaBeli > 0 && dp <= hargaBeli;
+  }, [form]);
+
   const load = useCallback(() => {
     setLoading(true);
     setErr('');
@@ -222,6 +228,13 @@ export function KreditPageContent() {
   async function onSave(e: FormEvent) {
     e.preventDefault();
     if (!form.anggota_id || !form.harga_beli) return;
+    const hargaBeli = Number(form.harga_beli) || 0;
+    const dp = Number(form.dp) || 0;
+    if (dp > hargaBeli) {
+      setFlash('DP tidak boleh lebih besar dari harga beli');
+      setFlashType('danger');
+      return;
+    }
     setSaving(true);
     try {
       const r = await api.post<{ message?: string }>('/kredit/save', {
@@ -230,8 +243,8 @@ export function KreditPageContent() {
         jenis: form.jenis,
         nama_barang: form.nama_barang,
         toko: form.toko,
-        harga_beli: Number(form.harga_beli),
-        dp: Number(form.dp) || 0,
+        harga_beli: hargaBeli,
+        dp,
         bunga_pct: Number(form.bunga_pct) || bungaDef,
         tenor: Number(form.tenor) || 12,
         tgl_mulai: form.tgl_mulai,
@@ -598,11 +611,16 @@ export function KreditPageContent() {
                 <label className="fl">DP / Uang Muka (Rp)</label>
                 <input
                   type="number"
-                  className="form-control form-control-sm"
+                  className={`form-control form-control-sm ${Number(form.dp) > Number(form.harga_beli) && form.harga_beli ? 'is-invalid' : ''}`}
                   value={form.dp}
                   onChange={(e) => setForm({ ...form, dp: e.target.value })}
                   min={0}
                 />
+                {Number(form.dp) > Number(form.harga_beli) && form.harga_beli && (
+                  <div className="invalid-feedback" style={{ display: 'block', fontSize: 11, marginTop: 2 }}>
+                    DP tidak boleh lebih besar dari harga beli
+                  </div>
+                )}
               </div>
               <div className="col-md-4">
                 <label className="fl">Pokok Pinjaman (Auto)</label>
@@ -667,7 +685,7 @@ export function KreditPageContent() {
               </div>
             </div>
           </div>
-          <ModalFooter onCancel={() => setShowForm(false)} saving={saving} submitLabel="Simpan Kredit" />
+          <ModalFooter onCancel={() => setShowForm(false)} saving={saving} submitLabel="Simpan Kredit" disabled={!isFormValid} />
         </form>
       </Modal>
 

@@ -19,8 +19,8 @@ function registerRoutes(router, deps) {
   router.get('/', accessRequired('simpanan'), asyncHandler(async (req, res) => {
   try {
     const { q = '' } = req.query;
-    let sql = 'SELECT * FROM anggota WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM anggota WHERE status=?';
+    const params = ['aktif'];
     if (q) {
       sql += ' AND (nama LIKE ? OR no LIKE ? OR nip LIKE ?)';
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);

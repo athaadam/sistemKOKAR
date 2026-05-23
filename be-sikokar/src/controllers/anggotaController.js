@@ -14,8 +14,8 @@ function registerRoutes(router, deps) {
   router.get('/', accessRequired('anggota'), asyncHandler(async (req, res) => {
   try {
     const { q = '', status = '', dept = '' } = req.query;
-    let sql = 'SELECT * FROM anggota WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM anggota WHERE status=?';
+    const params = ['aktif'];
     if (q) {
       sql += ' AND (nama LIKE ? OR no LIKE ? OR nip LIKE ? OR nik LIKE ?)';
       params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
@@ -105,6 +105,16 @@ router.post('/save', accessRequired('anggota'), asyncHandler(async (req, res) =>
 
     if (aid) {
       const old = await Q('SELECT * FROM anggota WHERE id=?', [aid], true);
+      if (old && ['keluar', 'pensiun', 'meninggal'].includes(data.status_detail) && old.status === 'aktif') {
+        const pinjamanAktif = await Q("SELECT COUNT(*) as c FROM pinjaman WHERE anggota_id=? AND status='aktif'", [aid], true);
+        if ((pinjamanAktif?.c || 0) > 0) {
+          return jsonErr(res, 'Tidak bisa menonaktifkan anggota karena masih ada pinjaman aktif');
+        }
+        const kreditAktif = await Q("SELECT COUNT(*) as c FROM kredit_barang WHERE anggota_id=? AND status='aktif'", [aid], true);
+        if ((kreditAktif?.c || 0) > 0) {
+          return jsonErr(res, 'Tidak bisa menonaktifkan anggota karena masih ada kredit barang aktif');
+        }
+      }
       await X(
         `UPDATE anggota SET no=?,nip=?,nama=?,nik=?,dept=?,jabatan=?,no_hp=?,gaji=?,
          tgl_masuk=?,tgl_lahir=?,alamat=?,kontak_darurat=?,telp_darurat=?,status=?,status_detail=?,
@@ -190,6 +200,13 @@ router.post('/save', accessRequired('anggota'), asyncHandler(async (req, res) =>
 router.delete('/:aid', accessRequired('anggota'), asyncHandler(async (req, res) => {
   try {
     const aid = req.params.aid;
+    const old = await Q('SELECT * FROM anggota WHERE id=?', [aid], true);
+    if (!old) return jsonErr(res, 'Anggota tidak ditemukan');
+
+    if (old.status === 'aktif') {
+      return jsonErr(res, 'Tidak bisa menghapus anggota aktif. Ubah status melalui form edit.');
+    }
+
     await db.transaction(async (trx) => {
       const pinIds = (
         await trx.raw('SELECT id FROM pinjaman WHERE anggota_id=?', [aid])
@@ -210,7 +227,8 @@ router.delete('/:aid', accessRequired('anggota'), asyncHandler(async (req, res) 
       await trx.raw('DELETE FROM penjualan WHERE anggota_id=?', [aid]);
       await trx.raw('DELETE FROM anggota WHERE id=?', [aid]);
     });
-    return jsonOk(res, {}, 'Anggota dan seluruh data terkait dihapus');
+    await audit('anggota', 'delete', 'anggota', aid, old, null, `Hapus anggota ${old.nama} yang sudah non-aktif`);
+    return jsonOk(res, {}, 'Anggota berhasil dihapus');
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
@@ -220,7 +238,8 @@ router.get('/export', accessRequired('anggota'), asyncHandler(async (req, res) =
   try {
     const fmt = req.query.fmt || 'csv';
     const rows = await Q(
-      'SELECT no,nip,nama,nik,dept,jabatan,no_hp,gaji,limit_kredit,limit_pinjaman,limit_darurat,max_loans,status,tgl_masuk FROM anggota ORDER BY no',
+      'SELECT no,nip,nama,nik,dept,jabatan,no_hp,gaji,limit_kredit,limit_pinjaman,limit_darurat,max_loans,status,tgl_masuk FROM anggota WHERE status=? ORDER BY no',
+      ['aktif'],
     );
     const cols = [
       'no', 'nip', 'nama', 'nik', 'dept', 'jabatan', 'no_hp', 'gaji', 'limit_kredit',
@@ -277,8 +296,8 @@ router.post('/import', accessRequired('anggota'), upload.single('file'), asyncHa
 router.get('/print', accessRequired('anggota'), asyncHandler(async (req, res) => {
   try {
     const { q = '', status = '', dept = '' } = req.query;
-    let sql = 'SELECT * FROM anggota WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM anggota WHERE status=?';
+    const params = ['aktif'];
     if (q) {
       sql += ' AND (nama LIKE ? OR no LIKE ? OR nip LIKE ?)';
       params.push(`%${q}%`, `%${q}%`, `%${q}%`);

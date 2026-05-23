@@ -12,8 +12,8 @@ function registerRoutes(router, deps) {
   router.get('/', accessRequired('supplier'), asyncHandler(async (req, res) => {
   try {
     const { q = '' } = req.query;
-    let sql = 'SELECT * FROM supplier WHERE 1=1';
-    const params = [];
+    let sql = 'SELECT * FROM supplier WHERE status=?';
+    const params = ['aktif'];
     if (q) {
       sql += ' AND (nama LIKE ? OR kode LIKE ?)';
       params.push(`%${q}%`, `%${q}%`);
@@ -62,11 +62,10 @@ router.delete('/:sid', accessRequired('supplier'), asyncHandler(async (req, res)
   try {
     const sid = req.params.sid;
     await db.transaction(async (trx) => {
-      await trx.raw('UPDATE barang SET supplier_id=NULL WHERE supplier_id=?', [sid]);
-      await trx.raw('UPDATE pembelian SET supplier_id=NULL WHERE supplier_id=?', [sid]);
-      await trx.raw('DELETE FROM supplier WHERE id=?', [sid]);
+      await trx.raw('DELETE FROM barang WHERE supplier_id=?', [sid]);
+      await trx.raw('UPDATE supplier SET status=? WHERE id=?', ['tidak aktif', sid]);
     });
-    return jsonOk(res, {}, 'Supplier dihapus');
+    return jsonOk(res, {}, 'Supplier dinonaktifkan dan barang dari supplier dihapus');
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
@@ -76,7 +75,8 @@ router.get('/export', accessRequired('supplier'), asyncHandler(async (req, res) 
   try {
     const fmt = req.query.fmt || 'csv';
     const rows = await Q(
-      'SELECT kode,nama,jenis,is_pkp,npwp,alamat,telp,status FROM supplier ORDER BY kode',
+      'SELECT kode,nama,jenis,is_pkp,npwp,alamat,telp,status FROM supplier WHERE status=? ORDER BY kode',
+      ['aktif'],
     );
     const cols = ['kode', 'nama', 'jenis', 'is_pkp', 'npwp', 'alamat', 'telp', 'status'];
     return sendExport(fmt, rows, cols, 'Data Supplier', 'supplier.xlsx', res);
