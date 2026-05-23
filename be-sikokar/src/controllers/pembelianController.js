@@ -24,7 +24,9 @@ function registerRoutes(router, deps) {
     }
     const suppliers = await Q("SELECT id,nama FROM supplier WHERE status='aktif' ORDER BY nama");
     const lokasi_list = await Q('SELECT * FROM lokasi WHERE aktif=1');
-    const barang_list = await Q('SELECT id,nama,satuan,harga_beli FROM barang ORDER BY nama');
+    const barang_list = await Q(`SELECT DISTINCT b.id,b.nama,b.satuan,b.harga_beli FROM barang b
+      INNER JOIN supplier sup ON b.supplier_id=sup.id
+      INNER JOIN stok s ON b.id=s.barang_id WHERE sup.status='aktif' AND s.jumlah>0 ORDER BY b.nama`);
     return jsonOk(res, { rows, tgl_from, tgl_to, q, suppliers, lokasi_list, barang_list });
   } catch (e) {
     return jsonErr(res, e.message, 500);

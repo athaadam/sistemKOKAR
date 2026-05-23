@@ -37,7 +37,7 @@ type BarangRow = {
 };
 
 type RefOption = { value?: string; label: string };
-type Supplier = { id: string; nama: string };
+type Supplier = { id: string; nama: string; status?: string };
 
 type BarangForm = {
   id: string;
@@ -112,6 +112,10 @@ export default function BarangPage() {
   const [importing, setImporting] = useState(false);
 
   const extraKats = kats.map((k) => k.kategori).filter((k) => k && !KAT_STD.includes(k));
+
+  const availableSuppliers = suppliers.filter(
+    (s) => s.status === 'aktif' || (form.id && s.id === form.supplier_id)
+  );
 
   const load = useCallback(() => {
     setLoading(true);
@@ -498,18 +502,26 @@ export default function BarangPage() {
               </div>
               <div className="col-md-8">
                 <label className="fl">Supplier</label>
-                <select
-                  value={form.supplier_id}
-                  onChange={(e) => setField('supplier_id', e.target.value)}
-                  className="form-select form-select-sm"
-                >
-                  <option value="">— Pilih Supplier —</option>
-                  {suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.nama}
-                    </option>
-                  ))}
-                </select>
+                {form.supplier_id &&
+                suppliers.find((s) => s.id === form.supplier_id)?.status === 'tidak aktif' ? (
+                  <div className="p-2 rounded fw-semibold" style={{ background: '#FEE2E2', border: '1px solid #FECACA', fontSize: 13, color: '#7F1D1D', minHeight: 38, display: 'flex', alignItems: 'center' }}>
+                    {suppliers.find((s) => s.id === form.supplier_id)?.nama} (Non-Aktif)
+                  </div>
+                ) : (
+                  <select
+                    value={form.supplier_id}
+                    onChange={(e) => setField('supplier_id', e.target.value)}
+                    className="form-select form-select-sm"
+                  >
+                    <option value="">— Pilih Supplier —</option>
+                    {availableSuppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.nama}
+                        {s.status === 'tidak aktif' ? ' (Non-Aktif)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
               <div className="col-md-4 d-flex align-items-end pb-1">
                 <div className="form-check">

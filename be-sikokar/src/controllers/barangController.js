@@ -15,7 +15,8 @@ function registerRoutes(router, deps) {
     let sql = `SELECT b.*,s.nama as supplier_nama,
       (SELECT COALESCE(SUM(st.jumlah),0) FROM stok st WHERE st.barang_id=b.id AND st.lokasi_id='L1') as stok_l1,
       (SELECT COALESCE(SUM(st.jumlah),0) FROM stok st WHERE st.barang_id=b.id AND st.lokasi_id='L2') as stok_l2
-      FROM barang b LEFT JOIN supplier s ON b.supplier_id=s.id WHERE 1=1`;
+      FROM barang b LEFT JOIN supplier s ON b.supplier_id=s.id
+      WHERE (s.status='aktif' OR (s.status='tidak aktif' AND (SELECT COALESCE(SUM(jumlah),0) FROM stok WHERE barang_id=b.id)>0) OR s.id IS NULL)`;
     const params = [];
     if (q) {
       sql += ' AND (b.nama LIKE ? OR b.kode LIKE ? OR b.barcode LIKE ?)';
@@ -30,7 +31,7 @@ function registerRoutes(router, deps) {
       'SELECT DISTINCT kategori FROM barang WHERE kategori IS NOT NULL ORDER BY kategori',
     );
     const suppliers = await Q(
-      "SELECT id,nama FROM supplier WHERE status='aktif' ORDER BY nama",
+      "SELECT id,nama,status FROM supplier ORDER BY nama",
     );
     const satuan_options = await Q(
       "SELECT * FROM ref_option WHERE group_key='satuan_barang' AND aktif=1 ORDER BY label",

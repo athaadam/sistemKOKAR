@@ -61,11 +61,8 @@ router.post('/save', accessRequired('supplier'), asyncHandler(async (req, res) =
 router.delete('/:sid', accessRequired('supplier'), asyncHandler(async (req, res) => {
   try {
     const sid = req.params.sid;
-    await db.transaction(async (trx) => {
-      await trx.raw('DELETE FROM barang WHERE supplier_id=?', [sid]);
-      await trx.raw('UPDATE supplier SET status=? WHERE id=?', ['tidak aktif', sid]);
-    });
-    return jsonOk(res, {}, 'Supplier dinonaktifkan dan barang dari supplier dihapus');
+    await X('UPDATE supplier SET status=? WHERE id=?', ['tidak aktif', sid]);
+    return jsonOk(res, {}, 'Supplier dinonaktifkan');
   } catch (e) {
     return jsonErr(res, e.message, 500);
   }
